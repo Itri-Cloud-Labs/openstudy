@@ -37,7 +37,7 @@ Current goals:
 
 - Terminal UI built with Ink and React.
 - First-launch setup flow.
-- Codex provider support.
+- Codex and OpenCode provider support.
 - Subject selector with `tab`.
 - Model selector with `ctrl+m`.
 - Reasoning selector with `ctrl+r`.
@@ -104,11 +104,13 @@ Keyboard shortcuts:
 - `ctrl+f`: choose study material.
 - `ctrl+l`: choose study language.
 - `ctrl+c`: exit or close an active modal.
+- Inside a session, `ctrl+l` moves to the next study mode.
 
 Slash commands:
 
 - `/setup`: open the setup flow.
 - `/exit`: exit the CLI.
+- `/sessions`: open saved sessions.
 
 ## Configuration
 

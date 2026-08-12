@@ -19,9 +19,9 @@ const DEFAULT_SESSION: SessionSettings = {
   subject: subjects.find(subject => subject.default)?.name ?? subjects[0]?.name ?? 'General',
   modelProvider: null,
   model: null,
-  reasoningEffort: 'Reasoning effort',
-  material: 'Material',
-  studyLanguage: 'Study Language',
+  reasoningEffort: null,
+  material: null,
+  studyLanguage: null,
 };
 
 function ensureConfigDir(): void {
@@ -51,9 +51,9 @@ function normalizeSession(value: unknown): SessionSettings {
     subject,
     modelProvider: isProvider(raw.modelProvider) ? raw.modelProvider : DEFAULT_SESSION.modelProvider,
     model: typeof raw.model === 'string' && raw.model.trim().length > 0 ? raw.model : DEFAULT_SESSION.model,
-    reasoningEffort: typeof raw.reasoningEffort === 'string' ? raw.reasoningEffort : DEFAULT_SESSION.reasoningEffort,
-    material: typeof raw.material === 'string' ? raw.material : DEFAULT_SESSION.material,
-    studyLanguage: typeof raw.studyLanguage === 'string' ? raw.studyLanguage : DEFAULT_SESSION.studyLanguage,
+    reasoningEffort: typeof raw.reasoningEffort === 'string' && raw.reasoningEffort.trim().length > 0 ? raw.reasoningEffort : DEFAULT_SESSION.reasoningEffort,
+    material: typeof raw.material === 'string' && raw.material.trim().length > 0 ? raw.material : DEFAULT_SESSION.material,
+    studyLanguage: typeof raw.studyLanguage === 'string' && raw.studyLanguage.trim().length > 0 ? raw.studyLanguage : DEFAULT_SESSION.studyLanguage,
   };
 }
 
@@ -117,8 +117,6 @@ export function updateSettings(patch: Partial<SessionSettings>): SessionSettings
   saveSession(next);
   return next;
 }
-
-export const UpdateSettings = updateSettings;
 
 export function configExists(): boolean {
   return fs.existsSync(CONFIG_FILE);

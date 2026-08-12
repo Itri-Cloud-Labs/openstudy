@@ -4,29 +4,18 @@ export type { AIProvider, ProviderConstructor, ProviderDefinition, ProviderModel
 
 import { closeCodexProvider, CodexProvider } from './codex.js';
 import { closeOpenCodeProvider, OpenCodeProvider } from './opencode.js';
+import { PROVIDERS, type Provider } from '../types/index.js';
 import type { AIProvider, ProviderDefinition } from './types.js';
 
-const providerDefinitions = [
-  {
-    id: 'codex',
-    label: 'Codex',
-    requiresKey: false,
-    Provider: CodexProvider,
-  },
-  {
-    id: 'opencode',
-    label: 'OpenCode',
-    requiresKey: false,
-    Provider: OpenCodeProvider,
-  },
-] as const satisfies readonly ProviderDefinition[];
+const providerClasses = {
+  codex: CodexProvider,
+  opencode: OpenCodeProvider,
+} as const satisfies Record<Provider, ProviderDefinition['Provider']>;
 
-export type ProviderId = typeof providerDefinitions[number]['id'];
-
-export const providers = {
-  codex: new CodexProvider(),
-  opencode: new OpenCodeProvider(),
-} as const;
+const providerDefinitions = PROVIDERS.map(provider => ({
+  ...provider,
+  Provider: providerClasses[provider.id],
+})) satisfies ProviderDefinition[];
 
 export function getAvailableProviders(): ProviderDefinition[] {
   return providerDefinitions.map(provider => ({ ...provider }));
@@ -36,7 +25,7 @@ export function getProviderDefinition(id: string): ProviderDefinition | null {
   return providerDefinitions.find(provider => provider.id === id) ?? null;
 }
 
-export function createProvider(id: ProviderId): AIProvider;
+export function createProvider(id: Provider): AIProvider;
 export function createProvider(id: string): AIProvider | null;
 export function createProvider(id: string): AIProvider | null {
   const definition = getProviderDefinition(id);

@@ -20,7 +20,6 @@ const LANGUAGES = [
   'Dutch',
   'Russian',
   'Turkish',
-  'Study Language',
 ];
 
 interface LanguageModalState extends ModalState {

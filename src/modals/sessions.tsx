@@ -138,7 +138,7 @@ function getStoredSessions() {
 function getSessionTitle(session: SessionSettings) {
   if (session.title?.trim()) return session.title;
 
-  if (session.material && session.material !== 'Material') {
+  if (session.material) {
     return formatMaterialLabel(session.material);
   }
 

@@ -6,12 +6,12 @@ import { PromptInput } from './PromptInput.js';
 import { SessionScreen } from './SessionScreen.js';
 import { loadCommands, type CommandContext, type CommandModule } from '../commands/index.js';
 import { subjects, type SubjectOption } from '../options/index.js';
-import { loadSession, UpdateSettings } from '../utils/config.js';
-import { CreateSession, SetSession } from '../utils/index.js';
+import { loadSession, updateSettings } from '../utils/config.js';
+import { createSession, setSession as setSavedSession } from '../utils/index.js';
 import { isTerminalMouseReport } from '../utils/input.js';
 import { PROVIDERS, type Provider, type SessionSettings } from '../types/index.js';
 import { ModalHost, loadModalManifests, loadModalModule, type ActiveModal, type ModalManifest, type ModalRenderContext, type ModalScreen, type ModalState, type ModalTrigger, type SelectedModel } from '../modals/index.js';
-import { getProviderDefinition } from '../providers/index.js';
+import { createProvider, getProviderDefinition } from '../providers/index.js';
 
 const VERSION = '0.1.0';
 const CONTENT_SIDE_PADDING = 3;
@@ -25,10 +25,10 @@ const ANSI_BG_DEFAULT = '\x1b[49m';
 const ANSI_CLEAR      = '\x1b[2J\x1b[H';
 
 const TIPS = [
-  'Use tab to browse available study agents.',
-  'Press ctrl+p to open the command palette.',
+  'Use tab to choose a subject.',
+  'Use slash commands for setup, saved sessions, and exit.',
   'Type a topic and press enter to start a session.',
-  'Agents can search the web, summarize, and quiz you.',
+  'Attach study material before starting a focused session.',
 ];
 
 interface HomeScreenProps {
@@ -76,19 +76,21 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onExit, onSetup, onReady
     return getProviderDefinition(selectedModel.provider)?.label ?? selectedModel.provider;
   }, [selectedModel]);
   const materialLabel = React.useMemo(() => formatMaterialLabel(session.material), [session.material]);
+  const reasoningLabel = session.reasoningEffort ?? 'Default';
+  const studyLanguageLabel = session.studyLanguage ?? 'Study Language';
   const config = React.useMemo(
     () => session.provider ? { provider: session.provider, apiKey: session.apiKey } : null,
     [session],
   );
 
   const updateSession = React.useCallback((patch: Partial<typeof session>) => {
-    const next = UpdateSettings(patch);
+    const next = updateSettings(patch);
     setSession(next);
     return next;
   }, []);
 
   const activateSession = React.useCallback((sessionId: string) => {
-    const next = SetSession(sessionId);
+    const next = setSavedSession(sessionId);
     if (!next) return null;
 
     setSession(next);
@@ -251,7 +253,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onExit, onSetup, onReady
     const trimmed = value.trim();
     if (!trimmed.startsWith('/')) {
       if (hasCompleteSessionOptions(session, selectedSubject, selectedModel)) {
-        const createdSession = CreateSession({ ...session, title: null, summaryText: null });
+        const createdSession = createSession({ ...session, title: null, summaryText: null });
         setActiveSessionId(createdSession.sessionId);
         setSessionPrompt(trimmed);
       }
@@ -302,10 +304,10 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onExit, onSetup, onReady
         modelProvider={selectedModel?.provider ?? null}
         provider={selectedProviderLabel}
         model={selectedModel?.name ?? selectedModelLabel}
-        reasoningEffort={session.reasoningEffort}
+        reasoningEffort={reasoningLabel}
         material={materialLabel}
-        materialPath={session.material}
-        studyLanguage={session.studyLanguage}
+        materialPath={session.material ?? ''}
+        studyLanguage={studyLanguageLabel}
         sessionId={activeSessionId}
         cwd={cwd}
         commands={commands}
@@ -347,9 +349,9 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onExit, onSetup, onReady
           subject={selectedSubject?.name ?? 'Subject'}
           subjectColor={selectedSubject?.color ?? '#3b82f6'}
           model={selectedModelLabel}
-          reasoningEffort={session.reasoningEffort}
+          reasoningEffort={reasoningLabel}
           material={materialLabel}
-          studyLanguage={session.studyLanguage}
+          studyLanguage={studyLanguageLabel}
         />
       </Box>
 
@@ -402,14 +404,14 @@ function hasCompleteSessionOptions(
   return Boolean(
     selectedSubject
     && selectedModel
-    && session.reasoningEffort !== 'Reasoning effort'
-    && session.material !== 'Material'
-    && session.studyLanguage !== 'Study Language'
+    && (!modelRequiresReasoning(selectedModel) || session.reasoningEffort)
+    && session.material
+    && session.studyLanguage
   );
 }
 
-function formatMaterialLabel(material: string) {
-  if (!material || material === 'Material') return material;
+function formatMaterialLabel(material: string | null) {
+  if (!material) return 'Material';
 
   const normalized = material.replace(/\\/g, '/');
   if (/^https?:\/\//i.test(normalized)) return truncateMaterialLabel(normalized);
@@ -426,9 +428,15 @@ function getSessionPromptTitle(session: SessionSettings) {
   if (trimmedTitle) return trimmedTitle;
 
   const material = formatMaterialLabel(session.material);
-  if (material && material !== 'Material') return material;
+  if (material !== 'Material') return material;
 
   return 'Study Session';
+}
+
+function modelRequiresReasoning(selectedModel: SelectedModel) {
+  const provider = createProvider(selectedModel.provider);
+  const modelOption = provider?.GetModels().find(option => option.model === selectedModel.name);
+  return Boolean(modelOption && modelOption.reasoningLevels.length > 0);
 }
 
 function truncateMaterialLabel(label: string) {

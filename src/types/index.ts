@@ -1,11 +1,6 @@
 export type Provider =
   | 'codex'
-  | 'opencode'
-  | 'openai'
-  | 'anthropic'
-  | 'google'
-  | 'openrouter'
-  | 'ollama';
+  | 'opencode';
 
 export interface ProviderMeta {
   id: Provider;
@@ -29,9 +24,9 @@ export interface SessionSettings {
   subject: string;
   modelProvider: Provider | null;
   model: string | null;
-  reasoningEffort: string;
-  material: string;
-  studyLanguage: string;
+  reasoningEffort: string | null;
+  material: string | null;
+  studyLanguage: string | null;
 }
 
 export const PROVIDERS: ProviderMeta[] = [

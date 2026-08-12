@@ -67,7 +67,7 @@ export function saveSessionById(sessionId: string, session: SessionSettings): Se
   return nextSession;
 }
 
-export function CreateSession(session: SessionSettings = DEFAULT_SESSION): SessionSettings {
+export function createSession(session: SessionSettings = DEFAULT_SESSION): SessionSettings {
   const homeSession = loadSession();
   const sessionId = randomUUID();
   const now = new Date().toISOString();
@@ -84,7 +84,7 @@ export function CreateSession(session: SessionSettings = DEFAULT_SESSION): Sessi
   });
 }
 
-export function SetSession(sessionId: string): SessionSettings | null {
+export function setSession(sessionId: string): SessionSettings | null {
   const session = getSessionById(sessionId);
   if (!session) return null;
 
