@@ -1,11 +1,11 @@
+import net from 'node:net';
 import { createOpencode } from '@opencode-ai/sdk/v2';
+import type { ProviderListResponse } from '@opencode-ai/sdk/v2';
 import type { ProviderModelOption, ProviderPromptOptions, ProviderPromptResult, StudyProvider } from './contracts.js';
 import { createProviderAbortError, normalizeProviderError, throwIfProviderAborted } from './errors.js';
 import { buildMaterialPrompt, resolvePromptFiles } from './material-prompt.js';
 
 type OpenCodeInstance = Awaited<ReturnType<typeof createOpencode>>;
-
-const OPENCODE_PORTS = [5678, 8754];
 
 const OPENCODE_CONFIG = {
   compaction: { auto: false },
@@ -21,9 +21,33 @@ const OPENCODE_CONFIG = {
   },
 };
 
+export const OPENCODE_LOGIN_REQUIRED_MESSAGE = [
+  'Could not connect to the OpenCode server.',
+  'Make sure the opencode CLI is installed and at least one provider is configured, then try again.',
+].join(' ');
+
+export const OPENCODE_NO_PROVIDERS_MESSAGE =
+  'OpenCode is running, but no upstream providers are connected. Run `opencode auth login` to configure one, then try again.';
+
 let instance: OpenCodeInstance | null = null;
 let initPromise: Promise<OpenCodeInstance> | null = null;
 let cachedModels: ProviderModelOption[] | null = null;
+
+function findFreePort(): Promise<number> {
+  return new Promise((resolve, reject) => {
+    const probe = net.createServer();
+    probe.once('error', reject);
+    probe.listen(0, '127.0.0.1', () => {
+      const address = probe.address();
+      if (!address || typeof address === 'string') {
+        probe.close(() => reject(new Error('Could not find a free port for the OpenCode server.')));
+        return;
+      }
+      const { port } = address;
+      probe.close(() => resolve(port));
+    });
+  });
+}
 
 async function getOrCreateOpencode(signal?: AbortSignal): Promise<OpenCodeInstance> {
   throwIfProviderAborted(signal);
@@ -31,18 +55,9 @@ async function getOrCreateOpencode(signal?: AbortSignal): Promise<OpenCodeInstan
 
   if (!initPromise) {
     initPromise = (async (): Promise<OpenCodeInstance> => {
-      let lastError: unknown;
-
-      for (const port of OPENCODE_PORTS) {
-        throwIfProviderAborted(signal);
-        try {
-          return await createOpencode({ port, config: OPENCODE_CONFIG });
-        } catch (error) {
-          lastError = error;
-        }
-      }
-
-      throw lastError;
+      const port = await findFreePort();
+      throwIfProviderAborted(signal);
+      return createOpencode({ port, config: OPENCODE_CONFIG });
     })()
       .then(created => {
         instance = created;
@@ -59,17 +74,6 @@ async function getOrCreateOpencode(signal?: AbortSignal): Promise<OpenCodeInstan
   return created;
 }
 
-export const OPENCODE_LOGIN_REQUIRED_MESSAGE = [
-  'Could not connect to the OpenCode server.',
-  'Make sure the opencode CLI is installed and at least one provider is configured, then try again.',
-].join(' ');
-
-const DEFAULT_MODEL = 'anthropic/claude-sonnet-4-5';
-
-// Retained for source compatibility. OpenCode models are discovered at runtime.
-export const OPENCODE_MODEL_OPTIONS: ProviderModelOption[] = [];
-export const OPENCODE_MODELS: string[] = [];
-
 export class OpenCodeProvider implements StudyProvider<'opencode'> {
   readonly id = 'opencode';
   readonly label = 'OpenCode';
@@ -83,44 +87,18 @@ export class OpenCodeProvider implements StudyProvider<'opencode'> {
       throw new Error(OPENCODE_LOGIN_REQUIRED_MESSAGE, { cause: error });
     }
 
-    throwIfProviderAborted(signal);
-    const health = await current.client.global.health();
-    throwIfProviderAborted(signal);
-    if (!health.data?.healthy) throw new Error(OPENCODE_LOGIN_REQUIRED_MESSAGE);
-  }
-
-  async refreshModels(signal?: AbortSignal): Promise<void> {
-    await this.checkAuth(signal);
-    const current = await getOrCreateOpencode(signal);
-
     try {
       const result = await current.client.provider.list();
       throwIfProviderAborted(signal);
-      if (!result.data) return;
+      if (!result.data) throw new Error(OPENCODE_LOGIN_REQUIRED_MESSAGE);
 
-      const { all, connected } = result.data;
-      const options: ProviderModelOption[] = [];
-
-      for (const provider of all) {
-        if (!connected.includes(provider.id)) continue;
-
-        for (const [modelId, model] of Object.entries(provider.models)) {
-          const id = `${provider.id}/${modelId}`;
-          options.push({
-            id,
-            label: `${model.name} (${provider.name})`,
-            model: id,
-            reasoningLevels: [],
-            group: { id: provider.id, name: provider.name },
-          });
-        }
-      }
-
-      if (options.length > 0) cachedModels = options;
-    } catch {
+      const options = toModelOptions(result.data);
+      if (options.length === 0) throw new Error(OPENCODE_NO_PROVIDERS_MESSAGE);
+      cachedModels = options;
+    } catch (error) {
       if (signal?.aborted) throw createProviderAbortError(signal.reason);
-      // Model discovery is non-fatal. Keep any last successful result and
-      // allow the auth check to remain usable.
+      if (error instanceof Error && error.message === OPENCODE_NO_PROVIDERS_MESSAGE) throw error;
+      throw new Error(OPENCODE_LOGIN_REQUIRED_MESSAGE, { cause: error });
     }
   }
 
@@ -140,10 +118,12 @@ export class OpenCodeProvider implements StudyProvider<'opencode'> {
     }
     const { client } = current;
 
-    const modelString = options.model ?? DEFAULT_MODEL;
+    const modelString = options.model ?? '';
     const slashIndex = modelString.indexOf('/');
-    const providerId = slashIndex >= 0 ? modelString.slice(0, slashIndex) : 'anthropic';
-    const modelId = slashIndex >= 0 ? modelString.slice(slashIndex + 1) : modelString;
+    const model =
+      slashIndex >= 0
+        ? { providerID: modelString.slice(0, slashIndex), modelID: modelString.slice(slashIndex + 1) }
+        : undefined;
     const fullInput = buildMaterialPrompt(input, resolvePromptFiles(options));
 
     let sessionId: string | null = null;
@@ -162,7 +142,7 @@ export class OpenCodeProvider implements StudyProvider<'opencode'> {
       const result = await client.session.prompt({
         sessionID: sessionId,
         parts: [{ type: 'text', text: fullInput }],
-        model: { providerID: providerId, modelID: modelId },
+        ...(model ? { model } : {}),
         agent: 'study',
         ...(options.system ? { system: options.system } : {}),
       });
@@ -202,12 +182,35 @@ export class OpenCodeProvider implements StudyProvider<'opencode'> {
   }
 }
 
+function toModelOptions(data: ProviderListResponse): ProviderModelOption[] {
+  const connected = new Set(data.connected ?? []);
+  const options: ProviderModelOption[] = [];
+
+  for (const provider of data.all) {
+    if (!connected.has(provider.id)) continue;
+
+    for (const [modelId, model] of Object.entries(provider.models ?? {})) {
+      const id = `${provider.id}/${modelId}`;
+      options.push({
+        id,
+        label: `${model.name || modelId} (${provider.name || provider.id})`,
+        model: id,
+        reasoningLevels: [],
+        group: { id: provider.id, name: provider.name || provider.id },
+      });
+    }
+  }
+
+  return options.sort((left, right) => left.label.localeCompare(right.label));
+}
+
 export async function disposeOpenCodeProvider(): Promise<void> {
   if (!instance) return;
 
   instance.server.close();
   instance = null;
   initPromise = null;
+  cachedModels = null;
 }
 
 function cloneModelOptions(options: ProviderModelOption[]): ProviderModelOption[] {

@@ -24,7 +24,8 @@ console.log(text);
 
 The contract has four methods: `checkAuth`, `getModels`, `prompt`, and `dispose`. `prompt` resolves once with the final response text; there is no streaming. Methods accept abort signals where the operation can wait on a subprocess, provider server, or model response.
 
-Codex uses read-only sandboxing and an approval policy of `never` for study requests. File options attach local study material, while `responseSchema` requests structured output. Authentication uses the local Codex login or `OPENAI_API_KEY`.
+Codex talks NDJSON JSON-RPC 2.0 to a spawned `codex app-server` child process (`src/providers/codex-app-server.ts`). Auth status comes from `account/read`, and models are discovered live through paginated `model/list` calls, so the model and reasoning lists always reflect the installed Codex CLI.
+Codex uses read-only sandboxing and an approval policy of `never` for study requests. File options attach local study material, while `responseSchema` maps to the turn's structured output schema. Authentication uses the local Codex login or `OPENAI_API_KEY`.
 
 Add a provider by implementing `StudyProvider`, adding its metadata to `PROVIDER_METADATA`, and registering a factory in `src/providers/index.ts`. Test it with a fake adapter before wiring a real SDK.
 

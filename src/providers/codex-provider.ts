@@ -1,104 +1,313 @@
-import { spawn } from 'node:child_process';
-import { createRequire } from 'node:module';
 import path from 'node:path';
-import { jsonSchema, Output, generateText } from 'ai';
-import { createCodexAppServer } from 'ai-sdk-provider-codex-cli';
-import type {
-  ProviderModelOption,
-  ProviderPromptOptions,
-  ProviderPromptResult,
-  ProviderReasoningLevel,
-  StudyProvider,
-} from './contracts.js';
-import { normalizeProviderError, throwIfProviderAborted } from './errors.js';
+import { CodexAppServer, type CodexAppServerNotification } from './codex-app-server.js';
+import { APP_VERSION } from '../shared/metadata.js';
+import type { ProviderModelOption, ProviderPromptOptions, ProviderPromptResult, StudyProvider } from './contracts.js';
+import { createProviderAbortError, normalizeProviderError, throwIfProviderAborted } from './errors.js';
 import { buildMaterialPrompt, isRemoteMaterial, resolvePromptFiles } from './material-prompt.js';
-
-const require = createRequire(import.meta.url);
-const CODEX_CLI_PATH = (() => {
-  try {
-    return path.join(path.dirname(require.resolve('@openai/codex/package.json')), 'bin', 'codex.js');
-  } catch {
-    return null;
-  }
-})();
-
-const DEFAULT_MODEL = 'gpt-5.3-codex';
-const DEFAULT_APPROVAL_POLICY = 'never';
-const DEFAULT_REASONING_LEVELS = [
-  { id: 'minimal', label: 'Minimal', value: 'minimal' },
-  { id: 'low', label: 'Low', value: 'low' },
-  { id: 'medium', label: 'Medium', value: 'medium' },
-  { id: 'high', label: 'High', value: 'high' },
-] as const satisfies readonly ProviderReasoningLevel[];
-
-export const CODEX_MODEL_OPTIONS: ProviderModelOption[] = [
-  {
-    id: 'gpt-5.3-codex',
-    label: 'gpt-5.3-codex',
-    model: 'gpt-5.3-codex',
-    reasoningLevels: DEFAULT_REASONING_LEVELS.map(level => ({ ...level })),
-  },
-  {
-    id: 'gpt-5.2-codex',
-    label: 'gpt-5.2-codex',
-    model: 'gpt-5.2-codex',
-    reasoningLevels: DEFAULT_REASONING_LEVELS.map(level => ({ ...level })),
-  },
-  {
-    id: 'gpt-5.2-codex-max',
-    label: 'gpt-5.2-codex-max',
-    model: 'gpt-5.2-codex-max',
-    reasoningLevels: [...DEFAULT_REASONING_LEVELS, { id: 'xhigh', label: 'xHigh', value: 'xhigh' }],
-  },
-  {
-    id: 'gpt-5.2-codex-mini',
-    label: 'gpt-5.2-codex-mini',
-    model: 'gpt-5.2-codex-mini',
-    reasoningLevels: DEFAULT_REASONING_LEVELS.map(level => ({ ...level })),
-  },
-  {
-    id: 'gpt-5.2',
-    label: 'gpt-5.2',
-    model: 'gpt-5.2',
-    reasoningLevels: DEFAULT_REASONING_LEVELS.map(level => ({ ...level })),
-  },
-  {
-    id: 'gpt-5.5',
-    label: 'gpt-5.5',
-    model: 'gpt-5.5',
-    reasoningLevels: [...DEFAULT_REASONING_LEVELS, { id: 'xhigh', label: 'xHigh', value: 'xhigh' }],
-  },
-  {
-    id: 'gpt-5.4',
-    label: 'gpt-5.4',
-    model: 'gpt-5.4',
-    reasoningLevels: DEFAULT_REASONING_LEVELS.map(level => ({ ...level })),
-  },
-];
-
-export const CODEX_MODELS = CODEX_MODEL_OPTIONS.map(option => option.model);
 
 export const CODEX_LOGIN_REQUIRED_MESSAGE = [
   'Codex is not logged in on this machine.',
-  'Please run `codex login` in a terminal window, or set `OPENAI_API_KEY`, then come back.',
+  'Please run `codex login` in a terminal window, then come back.',
 ].join(' ');
 
-const codexAppServer = createCodexAppServer({
-  defaultSettings: {
-    // Avoid app-server approval events for study requests until the upstream
-    // provider fixes malformed tool approval metadata.
-    approvalPolicy: DEFAULT_APPROVAL_POLICY,
-    autoApprove: true,
-    sandboxPolicy: 'read-only',
-    personality: 'none',
-    logger: false,
-    minCodexVersion: '0.105.0',
-  },
-});
+const CLIENT_INFO = { name: 'openstudy', title: 'OpenStudy', version: APP_VERSION };
+const APPROVAL_POLICY = 'never';
+const SANDBOX_MODE = 'read-only';
 
-export interface CodexPromptOptions extends ProviderPromptOptions {
-  approvalPolicy?: 'untrusted' | 'on-failure' | 'on-request' | 'never';
-  sandboxMode?: 'read-only' | 'workspace-write' | 'danger-full-access';
+const REASONING_EFFORT_LABELS: Record<string, string> = {
+  none: 'None',
+  minimal: 'Minimal',
+  low: 'Low',
+  medium: 'Medium',
+  high: 'High',
+  xhigh: 'Extra High',
+  max: 'Max',
+  ultra: 'Ultra',
+};
+
+interface CodexAccountResponse {
+  account?: unknown;
+  requiresOpenaiAuth?: boolean;
+}
+
+interface CodexCatalogModel {
+  model?: string;
+  displayName?: string;
+  hidden?: boolean;
+  isDefault?: boolean;
+  supportedReasoningEfforts?: Array<{ reasoningEffort?: string }>;
+}
+
+interface CodexModelListResponse {
+  data?: CodexCatalogModel[];
+  nextCursor?: string | null;
+}
+
+interface CodexThreadResponse {
+  thread?: { id?: string };
+}
+
+interface CodexTurnResponse {
+  turn?: { id?: string };
+}
+
+interface CodexTurnCompletedTurn {
+  status?: string;
+  error?: { message?: string } | null;
+  items?: Array<{ type?: string; text?: string }>;
+}
+
+let server: CodexAppServer | null = null;
+let connectPromise: Promise<CodexAppServer> | null = null;
+let modelCache: ProviderModelOption[] = [];
+let defaultModel: string | null = null;
+
+async function getOrCreateServer(signal?: AbortSignal): Promise<CodexAppServer> {
+  throwIfProviderAborted(signal);
+  if (server) return server;
+
+  if (!connectPromise) {
+    connectPromise = connect()
+      .then(connected => {
+        server = connected;
+        return connected;
+      })
+      .catch(error => {
+        connectPromise = null;
+        throw error;
+      });
+  }
+
+  const connected = await connectPromise;
+  throwIfProviderAborted(signal);
+  return connected;
+}
+
+async function connect(): Promise<CodexAppServer> {
+  const instance = CodexAppServer.spawn();
+  instance.addCloseListener(() => {
+    // Drop the cached connection so the next call spawns a fresh app-server.
+    if (server !== instance) return;
+    server = null;
+    connectPromise = null;
+  });
+  try {
+    await instance.request('initialize', {
+      clientInfo: CLIENT_INFO,
+      capabilities: { experimentalApi: true },
+    });
+    instance.notify('initialized');
+    return instance;
+  } catch (error) {
+    await instance.dispose();
+    throw error instanceof Error ? error : new Error(String(error));
+  }
+}
+
+async function readAccount(instance: CodexAppServer, signal?: AbortSignal): Promise<void> {
+  const response = (await instance.request('account/read', {}, signal)) as CodexAccountResponse;
+  if (!response.account && response.requiresOpenaiAuth) throw new Error(CODEX_LOGIN_REQUIRED_MESSAGE);
+}
+
+async function refreshModels(instance: CodexAppServer, signal?: AbortSignal): Promise<void> {
+  const options: ProviderModelOption[] = [];
+  let defaultSlug: string | null = null;
+  let cursor: string | null = null;
+
+  do {
+    const response = (await instance.request('model/list', cursor ? { cursor } : {}, signal)) as CodexModelListResponse;
+
+    for (const model of response.data ?? []) {
+      if (!model.model || model.hidden === true) continue;
+      if (model.isDefault === true && !defaultSlug) defaultSlug = model.model;
+      options.push(toModelOption(model.model, model));
+    }
+
+    cursor = response.nextCursor ?? null;
+  } while (cursor);
+
+  modelCache = options;
+  defaultModel = defaultSlug ?? options[0]?.model ?? null;
+}
+
+function toModelOption(slug: string, model: CodexCatalogModel): ProviderModelOption {
+  const reasoningLevels = (model.supportedReasoningEfforts ?? [])
+    .map(entry => entry.reasoningEffort)
+    .filter((effort): effort is string => Boolean(effort))
+    .map(effort => ({ id: effort, label: reasoningEffortLabel(effort), value: effort }));
+
+  return {
+    id: slug,
+    label: toDisplayName(slug, model),
+    model: slug,
+    reasoningLevels,
+  };
+}
+
+function toDisplayName(slug: string, model: CodexCatalogModel): string {
+  const displayName = model.displayName?.trim() || slug;
+  // Capitalize 'gpt' to 'GPT' and any letter following a dash.
+  return displayName.replace(/^gpt/i, 'GPT').replace(/-([a-z])/g, (_, letter: string) => `-${letter.toUpperCase()}`);
+}
+
+function reasoningEffortLabel(effort: string): string {
+  return REASONING_EFFORT_LABELS[effort] ?? effort;
+}
+
+function resolveModel(options: ProviderPromptOptions): string | null {
+  return options.model?.trim() || defaultModel;
+}
+
+function resolveEffort(options: ProviderPromptOptions, model: string | null): string | undefined {
+  const effort = options.reasoningEffort?.trim();
+  if (!effort) return undefined;
+  const levels = modelCache.find(option => option.model === model)?.reasoningLevels ?? [];
+  return levels.some(level => level.value === effort) ? effort : undefined;
+}
+
+async function openThread(
+  instance: CodexAppServer,
+  options: ProviderPromptOptions,
+  files: Array<{ path: string }>,
+  signal?: AbortSignal,
+): Promise<string> {
+  const firstLocalFile = files.find(file => !isRemoteMaterial(file.path));
+  const params = {
+    cwd: options.workingDirectory ?? (firstLocalFile ? path.dirname(path.resolve(firstLocalFile.path)) : process.cwd()),
+    approvalPolicy: APPROVAL_POLICY,
+    sandbox: SANDBOX_MODE,
+    personality: 'none',
+    ...(options.system ? { developerInstructions: options.system } : {}),
+  };
+
+  if (options.threadId) {
+    try {
+      const resumed = (await instance.request(
+        'thread/resume',
+        { threadId: options.threadId, ...params },
+        signal,
+      )) as CodexThreadResponse;
+      if (resumed.thread?.id) return resumed.thread.id;
+    } catch {
+      // Fall back to a fresh thread when the previous one cannot be restored.
+    }
+  }
+
+  const started = (await instance.request('thread/start', params, signal)) as CodexThreadResponse;
+  const threadId = started.thread?.id;
+  if (!threadId) throw new Error('The Codex app-server did not return a study thread.');
+  return threadId;
+}
+
+function readTextFromItems(items: CodexTurnCompletedTurn['items']): string {
+  return (items ?? [])
+    .filter(
+      (item): item is { type: string; text: string } => item.type === 'agentMessage' && typeof item.text === 'string',
+    )
+    .map(item => item.text)
+    .join('');
+}
+
+function runTurn(
+  instance: CodexAppServer,
+  threadId: string,
+  text: string,
+  options: ProviderPromptOptions,
+): Promise<string> {
+  return new Promise<string>((resolve, reject) => {
+    let settled = false;
+    let turnId: string | null = null;
+    let turnStarted = false;
+    const deltas: string[] = [];
+
+    const finish = (settle: () => void) => {
+      if (settled) return;
+      settled = true;
+      instance.removeNotificationListener(onNotification);
+      instance.removeCloseListener(onClose);
+      options.signal?.removeEventListener('abort', onAbort);
+      settle();
+    };
+
+    const fail = (error: unknown) =>
+      finish(() => reject(error instanceof Error ? error : new Error('The Codex turn failed unexpectedly.')));
+
+    function onNotification(notification: CodexAppServerNotification): void {
+      const params = notification.params as Record<string, unknown> | undefined;
+      if (!params || params.threadId !== threadId) return;
+
+      if (notification.method === 'item/agentMessage/delta') {
+        if (typeof params.delta === 'string') deltas.push(params.delta);
+        return;
+      }
+
+      if (notification.method === 'turn/completed') {
+        const turn = params.turn as CodexTurnCompletedTurn | undefined;
+        const errorMessage = turn?.error?.message?.trim();
+        if (errorMessage) {
+          fail(new Error(errorMessage));
+          return;
+        }
+        const text = readTextFromItems(turn?.items) || deltas.join('');
+        finish(() => {
+          if (!text.trim()) {
+            reject(new Error('The provider returned an empty response.'));
+            return;
+          }
+          resolve(text.trim());
+        });
+        return;
+      }
+
+      if (notification.method === 'error') {
+        if (params.willRetry === true) return;
+        const message =
+          typeof (params.error as { message?: unknown } | undefined)?.message === 'string'
+            ? (params.error as { message: string }).message
+            : 'The Codex turn failed.';
+        fail(new Error(message));
+      }
+    }
+
+    function onAbort(): void {
+      const reason = options.signal?.reason;
+      fail(createProviderAbortError(reason));
+      if (turnId) void instance.request('turn/interrupt', { threadId, turnId }).catch(() => undefined);
+    }
+
+    function onClose(error: Error): void {
+      fail(error);
+    }
+
+    instance.addNotificationListener(onNotification);
+    instance.addCloseListener(onClose);
+    options.signal?.addEventListener('abort', onAbort, { once: true });
+
+    const model = resolveModel(options);
+    const effort = resolveEffort(options, model);
+    void instance
+      .request(
+        'turn/start',
+        {
+          threadId,
+          input: [{ type: 'text', text }],
+          approvalPolicy: APPROVAL_POLICY,
+          sandboxPolicy: { type: 'readOnly' },
+          ...(model ? { model } : {}),
+          ...(effort ? { effort } : {}),
+          ...(options.responseSchema ? { outputSchema: options.responseSchema } : {}),
+        },
+        options.signal,
+      )
+      .then(response => {
+        turnId = ((response as CodexTurnResponse).turn?.id ?? null) as string | null;
+        turnStarted = true;
+        if (options.signal?.aborted) onAbort();
+      })
+      .catch(error => {
+        if (!turnStarted && !settled) fail(error);
+      });
+  });
 }
 
 export class CodexProvider implements StudyProvider<'codex'> {
@@ -106,85 +315,30 @@ export class CodexProvider implements StudyProvider<'codex'> {
   readonly label = 'Codex';
 
   async checkAuth(signal?: AbortSignal): Promise<void> {
-    throwIfProviderAborted(signal);
-    if (process.env.OPENAI_API_KEY?.trim()) return;
-
-    let result: { exitCode: number | null; output: string };
     try {
-      result = await new Promise((resolve, reject) => {
-        const spawnOptions = {
-          env: process.env,
-          stdio: ['ignore', 'pipe', 'pipe'] as ['ignore', 'pipe', 'pipe'],
-          signal,
-        };
-        const child = CODEX_CLI_PATH
-          ? spawn(process.execPath, [CODEX_CLI_PATH, 'login', 'status'], spawnOptions)
-          : spawn('codex', ['login', 'status'], spawnOptions);
-
-        let output = '';
-        child.stdout.on('data', chunk => {
-          output += String(chunk);
-        });
-        child.stderr.on('data', chunk => {
-          output += String(chunk);
-        });
-        child.on('error', reject);
-        child.on('close', exitCode => {
-          resolve({ exitCode, output });
-        });
-      });
+      const instance = await getOrCreateServer(signal);
+      await readAccount(instance, signal);
+      await refreshModels(instance, signal);
     } catch (error) {
-      throw normalizeProviderError(error, { signal });
+      throw normalizeProviderError(error, { authMessage: CODEX_LOGIN_REQUIRED_MESSAGE, signal });
     }
-
-    throwIfProviderAborted(signal);
-    if (result.exitCode !== 0) throw new Error(CODEX_LOGIN_REQUIRED_MESSAGE);
   }
 
   getModels(): ProviderModelOption[] {
-    return cloneModelOptions(CODEX_MODEL_OPTIONS);
+    return cloneModelOptions(modelCache);
   }
 
-  async prompt(input: string, options: CodexPromptOptions = {}): Promise<ProviderPromptResult> {
-    await this.checkAuth(options.signal);
+  async prompt(input: string, options: ProviderPromptOptions = {}): Promise<ProviderPromptResult> {
+    throwIfProviderAborted(options.signal);
 
     const files = resolvePromptFiles(options);
-    const firstLocalFile = files.find(file => !isRemoteMaterial(file.path));
-    const workingDirectory =
-      options.workingDirectory ?? (firstLocalFile ? path.dirname(path.resolve(firstLocalFile.path)) : process.cwd());
-    const reasoningEffort = ['none', 'minimal', 'low', 'medium', 'high', 'xhigh'].includes(
-      options.reasoningEffort ?? '',
-    )
-      ? (options.reasoningEffort as 'none' | 'minimal' | 'low' | 'medium' | 'high' | 'xhigh')
-      : undefined;
-    const providerOptions =
-      options.threadId || options.system
-        ? {
-            'codex-app-server': {
-              ...(options.threadId ? { threadId: options.threadId } : {}),
-              ...(options.system ? { developerInstructions: options.system } : {}),
-            },
-          }
-        : undefined;
     const prompt = buildMaterialPrompt(input, files);
-    const structured = Boolean(options.responseSchema);
 
     try {
-      const result = await generateText({
-        model: codexAppServer(options.model ?? DEFAULT_MODEL, {
-          cwd: workingDirectory,
-          approvalPolicy: options.approvalPolicy ?? DEFAULT_APPROVAL_POLICY,
-          sandboxPolicy: options.sandboxMode ?? 'read-only',
-          effort: reasoningEffort,
-        }),
-        prompt,
-        abortSignal: options.signal,
-        ...(structured ? { output: Output.object({ schema: jsonSchema(options.responseSchema) }) } : {}),
-        providerOptions,
-      });
-
-      const text = result.text.trim();
-      if (!text) throw new Error('The provider returned an empty response.');
+      const instance = await getOrCreateServer(options.signal);
+      await readAccount(instance, options.signal);
+      const threadId = await openThread(instance, options, files, options.signal);
+      const text = await runTurn(instance, threadId, prompt, options);
       return { text };
     } catch (error) {
       throw normalizeProviderError(error, {
@@ -200,7 +354,12 @@ export class CodexProvider implements StudyProvider<'codex'> {
 }
 
 export async function disposeCodexProvider(): Promise<void> {
-  await codexAppServer.close();
+  const instance = server;
+  server = null;
+  connectPromise = null;
+  modelCache = [];
+  defaultModel = null;
+  if (instance) await instance.dispose();
 }
 
 function cloneModelOptions(options: ProviderModelOption[]): ProviderModelOption[] {

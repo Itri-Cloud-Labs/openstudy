@@ -115,6 +115,18 @@ function StudyWorkspace({ route, commands, inputDisabled, onExit, onRouteChange 
   const modalScreen: ModalScreen = route.screen === 'session' ? 'session' : 'home';
   const { selectedSubject, selectedModel, presentation } = useSessionSelection(preferences);
 
+  // Probe the configured provider once per run so model and reasoning pickers
+  // are populated from the harness before the models modal is opened.
+  const warmedProviderRef = React.useRef<Provider | null>(null);
+  React.useEffect(() => {
+    const providerId = preferences.modelProvider;
+    if (!providerId || warmedProviderRef.current === providerId) return;
+    warmedProviderRef.current = providerId;
+    const instance = createProvider(providerId);
+    if (!instance) return;
+    void instance.checkAuth().catch(() => undefined);
+  }, [preferences.modelProvider]);
+
   const handleUpdatePreferences = React.useCallback((patch: Partial<AppPreferences>) => {
     const next = updatePreferences(patch);
     setPreferences(next);
