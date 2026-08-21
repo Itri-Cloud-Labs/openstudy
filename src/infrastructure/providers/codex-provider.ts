@@ -169,49 +169,7 @@ export class CodexProvider implements LegacyCompatibleStudyProvider<'codex'> {
           }
         : undefined;
     const prompt = buildMaterialPrompt(input, files);
-
-    if (options.responseSchema) {
-      yield { type: 'status', text: 'Starting session' };
-
-      const result = streamText({
-        model: codexAppServer(options.model ?? DEFAULT_MODEL, {
-          cwd: workingDirectory,
-          approvalPolicy: options.approvalPolicy ?? DEFAULT_APPROVAL_POLICY,
-          sandboxPolicy: options.sandboxMode ?? 'read-only',
-          effort: reasoningEffort,
-        }),
-        prompt,
-        abortSignal: options.signal,
-        output: Output.object({ schema: jsonSchema(options.responseSchema) }),
-        providerOptions,
-      });
-
-      let hasResponse = false;
-      let responseText = '';
-      yield { type: 'status', text: 'Waiting for structured response' };
-
-      for await (const part of result.fullStream) {
-        if (part.type === 'error') {
-          throw normalizeProviderError(part.error, {
-            authMessage: CODEX_LOGIN_REQUIRED_MESSAGE,
-            signal: options.signal,
-          });
-        }
-
-        if (!hasResponse && (part.type === 'reasoning-start' || part.type === 'reasoning-delta')) {
-          yield { type: 'status', text: 'Analyzing key ideas' };
-          continue;
-        }
-
-        if (part.type === 'text-delta') {
-          hasResponse = true;
-          responseText += part.text;
-          yield { type: 'response', text: responseText };
-        }
-      }
-
-      return;
-    }
+    const structured = Boolean(options.responseSchema);
 
     yield { type: 'status', text: 'Starting session' };
 
@@ -224,12 +182,13 @@ export class CodexProvider implements LegacyCompatibleStudyProvider<'codex'> {
       }),
       prompt,
       abortSignal: options.signal,
+      ...(structured ? { output: Output.object({ schema: jsonSchema(options.responseSchema) }) } : {}),
       providerOptions,
     });
 
     let hasResponse = false;
     let responseText = '';
-    yield { type: 'status', text: 'Waiting for response' };
+    yield { type: 'status', text: structured ? 'Waiting for structured response' : 'Waiting for response' };
 
     for await (const part of result.fullStream) {
       if (part.type === 'error') {
@@ -256,17 +215,8 @@ export class CodexProvider implements LegacyCompatibleStudyProvider<'codex'> {
     await disposeCodexProvider();
   }
 
-  async CheckLoginStatus(): Promise<boolean> {
-    await this.checkAuth();
-    return true;
-  }
-
   GetModels(): ProviderModelOption[] {
     return cloneModelOptions(CODEX_MODEL_OPTIONS);
-  }
-
-  async *Prompt(input: string, options: CodexPromptOptions = {}): AsyncGenerator<ProviderPromptStreamEvent> {
-    yield* this.streamPrompt(input, options);
   }
 }
 

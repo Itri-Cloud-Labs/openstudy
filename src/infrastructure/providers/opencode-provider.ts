@@ -245,17 +245,8 @@ export class OpenCodeProvider implements LegacyCompatibleStudyProvider<'opencode
     await disposeOpenCodeProvider();
   }
 
-  async CheckLoginStatus(): Promise<boolean> {
-    await this.listModels();
-    return true;
-  }
-
   GetModels(): ProviderModelOption[] {
     return cloneModelOptions(cachedModels ?? []);
-  }
-
-  async *Prompt(input: string, options: ProviderPromptOptions = {}): AsyncGenerator<ProviderPromptStreamEvent> {
-    yield* this.streamPrompt(input, options);
   }
 }
 

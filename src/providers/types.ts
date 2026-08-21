@@ -16,10 +16,5 @@ export type {
 /** @deprecated Depend on StudyProvider for new code. */
 export type AIProvider = LegacyCompatibleStudyProvider<Provider>;
 
-/** @deprecated Provider construction is owned by providerRegistry. */
-export type ProviderConstructor<TProvider extends AIProvider = AIProvider> = new () => TProvider;
-
 /** @deprecated Use ProviderMetadata and providerRegistry for new code. */
-export interface ProviderDefinition<TProvider extends AIProvider = AIProvider> extends ProviderMetadata<Provider> {
-  Provider: ProviderConstructor<TProvider>;
-}
+export type ProviderDefinition<TProviderId extends Provider = Provider> = ProviderMetadata<TProviderId>;

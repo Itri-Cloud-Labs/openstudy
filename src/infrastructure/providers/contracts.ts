@@ -62,12 +62,8 @@ export interface StudyProvider<TProviderId extends string = Provider> {
  */
 export interface LegacyCompatibleStudyProvider<TProviderId extends string = Provider>
   extends StudyProvider<TProviderId> {
-  /** @deprecated Use checkAuth instead. */
-  CheckLoginStatus(): Promise<boolean>;
   /** @deprecated Use listModels instead. */
   GetModels(): ProviderModelOption[];
-  /** @deprecated Use streamPrompt instead. */
-  Prompt(input: string, options?: ProviderPromptOptions): AsyncGenerator<ProviderPromptStreamEvent>;
 }
 
 export interface ProviderRegistration<

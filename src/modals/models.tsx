@@ -714,7 +714,7 @@ async function checkProviderAuth(providers: ModelProviderDefinition[]): Promise<
       }
 
       try {
-        await instance.CheckLoginStatus();
+        await instance.checkAuth();
         return [provider.id, { state: 'ready' }] as const;
       } catch (error) {
         const message = error instanceof Error ? error.message : String(error);

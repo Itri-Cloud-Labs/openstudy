@@ -1,7 +1,7 @@
 import React from 'react';
 import { Box, Text } from 'ink';
-import { Logo } from '../shared/ui/Logo.js';
-import { useTerminalSize } from '../shared/hooks/useTerminalSize.js';
+import { Logo } from './Logo.js';
+import { useTerminalSize } from '../hooks/useTerminalSize.js';
 
 const LOADING_FRAMES = ['|', '/', '-', '\\'];
 const TROLL_MESSAGES = [

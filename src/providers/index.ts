@@ -23,7 +23,6 @@ export {
 } from '../infrastructure/providers/index.js';
 export type {
   AIProvider,
-  ProviderConstructor,
   ProviderDefinition,
   ProviderMetadata,
   ProviderModelOption,
@@ -35,26 +34,12 @@ export type {
   StudyProvider,
 } from './types.js';
 
-const providerConstructors = {
-  codex: CodexProvider,
-  opencode: OpenCodeProvider,
-} as const;
-
 export function getAvailableProviders(): ProviderDefinition[] {
-  return providerRegistry.listMetadata().map(metadata => ({
-    ...metadata,
-    Provider: providerConstructors[metadata.id],
-  }));
+  return providerRegistry.listMetadata();
 }
 
 export function getProviderDefinition(id: string): ProviderDefinition | null {
-  const metadata = providerRegistry.getMetadata(id);
-  if (!metadata) return null;
-
-  return {
-    ...metadata,
-    Provider: providerConstructors[metadata.id],
-  };
+  return providerRegistry.getMetadata(id);
 }
 
 export function createProvider(id: Provider): AIProvider;

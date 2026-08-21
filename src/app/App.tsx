@@ -1,9 +1,8 @@
 import React from 'react';
 import { Box, Text, useInput } from 'ink';
 import { loadCommands, type CommandContext, type CommandModule } from '../commands/index.js';
-import { LoadingScreen } from '../components/LoadingScreen.js';
-import { SetupScreen } from '../components/SetupScreen.js';
 import { HomeScreen } from '../features/home/HomeScreen.js';
+import { SetupScreen } from '../features/setup/SetupScreen.js';
 import { SessionScreen } from '../features/study-session/SessionScreen.js';
 import { getHomeDirectory, getWorkingDirectory } from '../infrastructure/runtime/environment.js';
 import { useModalManager } from '../features/modals/useModalManager.js';
@@ -14,6 +13,7 @@ import { createProvider, getProviderDefinition } from '../providers/index.js';
 import { useTerminalSize } from '../shared/hooks/useTerminalSize.js';
 import { formatMaterialLabel, shortenHomePath } from '../shared/text.js';
 import { useTerminalSurface } from '../shared/terminal/useTerminalSurface.js';
+import { LoadingScreen } from '../shared/ui/LoadingScreen.js';
 import { PROVIDERS, type Provider, type SessionSettings } from '../types/index.js';
 import { loadSession, updateSettings } from '../utils/config.js';
 import { createSession, setSession as setSavedSession } from '../utils/index.js';

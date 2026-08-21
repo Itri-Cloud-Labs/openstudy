@@ -31,7 +31,7 @@ export async function* generateSummary(request: GenerateSummaryRequest): AsyncGe
   let latestResponse = '';
   let latestSummary: SummaryPayload | null = null;
 
-  for await (const event of request.provider.Prompt(buildSummaryUserPrompt(request.studyLanguage), {
+  for await (const event of request.provider.streamPrompt(buildSummaryUserPrompt(request.studyLanguage), {
     system: summarySystemPrompt,
     model: request.model,
     reasoningEffort: request.reasoningEffort,
