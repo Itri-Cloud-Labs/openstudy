@@ -12,5 +12,5 @@ export const manifest: ModalManifest = {
     input: SHORTCUTS.model.input,
     ctrl: SHORTCUTS.model.ctrl,
   },
-  load: () => import('./models.js'),
+  load: () => import('./models/index.js'),
 };

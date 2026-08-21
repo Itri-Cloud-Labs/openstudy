@@ -43,10 +43,13 @@ export function useModalManager(options: ModalManagerOptions): ModalManager {
   const contextRef = React.useRef<ModalRenderContext | null>(null);
 
   const close = React.useCallback(() => setModal(null), []);
-  const update = React.useCallback((updater: ModalState | ((current: ModalState) => ModalState)) => {
+  const update = React.useCallback(<S extends ModalState>(updater: S | ((current: S) => S)) => {
     setModal(current => {
       if (!current) return current;
-      const state = typeof updater === 'function' ? updater(current.state) : updater;
+      // The manager stores the open modal erased to its base state; callers
+      // narrow via the generic parameter.
+      const state =
+        typeof updater === 'function' ? (updater as (current: never) => ModalState)(current.state as never) : updater;
       return { ...current, state };
     });
   }, []);

@@ -3,34 +3,34 @@ import type { SessionSettings } from '../domain/study.js';
 import { focusTextColor, getAllSession } from '../utils/index.js';
 import { formatMaterialLabel, truncate } from '../shared/text.js';
 import { createHandleInput, isCancel, isSubmit } from './input.js';
-import type { ModalContext, ModalInputProps, ModalRenderProps, ModalState } from './types.js';
+import type { ModalContext, ModalInputProps, ModalRenderProps } from './types.js';
 import { THEME } from '../shared/theme.js';
 
 const SESSIONS_MODAL_MAX_ROWS = 8;
 
-interface SessionsModalState extends ModalState {
+interface SessionsModalState {
   id: 'sessions';
   selected: number;
   sessions: SessionSettings[];
   error?: string;
 }
 
-export function open(context: ModalContext): ModalState {
+export function open(context: ModalContext): SessionsModalState {
   const sessions = getStoredSessions();
   const currentIndex = sessions.findIndex(session => session.sessionId === context.activeSessionId);
 
   return { id: 'sessions', selected: Math.max(0, currentIndex), sessions };
 }
 
-export function getHeight(modal: ModalState) {
-  const state = modal as SessionsModalState;
+export function getHeight(modal: SessionsModalState) {
+  const state = modal;
   const rows = Math.max(1, Math.min(SESSIONS_MODAL_MAX_ROWS, state.sessions.length));
 
   return rows + (state.error ? 7 : 6);
 }
 
-export function render({ modal, context }: ModalRenderProps) {
-  const state = modal as SessionsModalState;
+export function render({ modal, context }: ModalRenderProps<SessionsModalState>) {
+  const state = modal;
   const subjectColor = context.selectedSubject?.color ?? '#3b82f6';
   const sessions = state.sessions;
   const rows = Math.max(1, Math.min(SESSIONS_MODAL_MAX_ROWS, sessions.length));
@@ -93,7 +93,7 @@ export function render({ modal, context }: ModalRenderProps) {
   );
 }
 
-export const handleInput = createHandleInput([
+export const handleInput = createHandleInput<SessionsModalState>([
   {
     when: isCancel,
     run: ({ context }) => context.closeModal(),
@@ -112,8 +112,8 @@ export const handleInput = createHandleInput([
   },
 ]);
 
-function selectSession({ modal, context }: ModalInputProps) {
-  const state = modal as SessionsModalState;
+function selectSession({ modal, context }: ModalInputProps<SessionsModalState>) {
+  const state = modal;
   const sessions = state.sessions;
   const session = sessions[state.selected];
 
@@ -134,8 +134,8 @@ function selectSession({ modal, context }: ModalInputProps) {
   context.closeModal();
 }
 
-function moveSelection({ modal, context }: ModalInputProps, direction: -1 | 1) {
-  const state = modal as SessionsModalState;
+function moveSelection({ modal, context }: ModalInputProps<SessionsModalState>, direction: -1 | 1) {
+  const state = modal;
   const sessions = state.sessions;
   if (sessions.length === 0) return;
 

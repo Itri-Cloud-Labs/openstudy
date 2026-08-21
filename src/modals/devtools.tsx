@@ -3,7 +3,7 @@ import { CONFIG_DIR } from '../utils/config.js';
 import { erasePersistenceRoot } from '../infrastructure/persistence/index.js';
 import { getSessionById } from '../utils/index.js';
 import { createHandleInput, isBackspace, isCancel, isPlainTextInput, isSubmit } from './input.js';
-import type { ModalContext, ModalInputProps, ModalRenderProps, ModalState } from './types.js';
+import type { ModalContext, ModalInputProps, ModalRenderProps } from './types.js';
 import { THEME } from '../shared/theme.js';
 
 const DEVTOOLS_MAX_ROWS = 10;
@@ -25,12 +25,12 @@ type DevtoolsModalState =
   | { id: 'devtools'; layer: 'erase'; confirmation: string; error?: string }
   | { id: 'devtools'; layer: 'result'; title: string; message: string };
 
-export function open(_context: ModalContext): ModalState {
+export function open(_context: ModalContext): DevtoolsModalState {
   return { id: 'devtools', layer: 'options', selected: 0 };
 }
 
-export function getHeight(modal: ModalState) {
-  const state = modal as DevtoolsModalState;
+export function getHeight(modal: DevtoolsModalState) {
+  const state = modal;
   if (state.layer === 'session') {
     return Math.max(1, Math.min(DEVTOOLS_MAX_ROWS, state.lines.length)) + 7;
   }
@@ -38,8 +38,8 @@ export function getHeight(modal: ModalState) {
   return OPTIONS.length + 7;
 }
 
-export function render(props: ModalRenderProps) {
-  const state = props.modal as DevtoolsModalState;
+export function render(props: ModalRenderProps<DevtoolsModalState>) {
+  const state = props.modal;
 
   if (state.layer === 'session') return <SessionDumpLayer {...props} modal={state} />;
   if (state.layer === 'erase') return <EraseLayer modal={state} />;
@@ -47,26 +47,27 @@ export function render(props: ModalRenderProps) {
   return <OptionsLayer {...props} modal={state} />;
 }
 
-export const handleInput = createHandleInput([
+export const handleInput = createHandleInput<DevtoolsModalState>([
   {
     when: props => isOptionsLayer(props) && isOptionsInput(props),
-    run: props =>
-      handleOptionsInput(props.key, props.modal as Extract<DevtoolsModalState, { layer: 'options' }>, props.context),
+    run: props => {
+      if (props.modal.layer !== 'options') return;
+      handleOptionsInput(props.key, props.modal, props.context);
+    },
   },
   {
     when: props => isSessionLayer(props) && isSessionInput(props),
-    run: props =>
-      handleSessionInput(props.key, props.modal as Extract<DevtoolsModalState, { layer: 'session' }>, props.context),
+    run: props => {
+      if (props.modal.layer !== 'session') return;
+      handleSessionInput(props.key, props.modal, props.context);
+    },
   },
   {
     when: props => isEraseLayer(props) && isEraseInput(props),
-    run: props =>
-      handleEraseInput(
-        props.input,
-        props.key,
-        props.modal as Extract<DevtoolsModalState, { layer: 'erase' }>,
-        props.context,
-      ),
+    run: props => {
+      if (props.modal.layer !== 'erase') return;
+      handleEraseInput(props.input, props.key, props.modal, props.context);
+    },
   },
   {
     when: props => isResultLayer(props) && (isCancel(props) || isSubmit(props)),
@@ -74,10 +75,7 @@ export const handleInput = createHandleInput([
   },
 ]);
 
-function OptionsLayer({
-  modal,
-  context,
-}: ModalRenderProps & { modal: Extract<DevtoolsModalState, { layer: 'options' }> }) {
+function OptionsLayer({ modal, context }: ModalRenderProps<Extract<DevtoolsModalState, { layer: 'options' }>>) {
   const subjectColor = context.selectedSubject?.color ?? '#3b82f6';
 
   return (
@@ -167,7 +165,7 @@ function ResultLayer({ modal }: { modal: Extract<DevtoolsModalState, { layer: 'r
   );
 }
 
-function SessionDumpLayer({ modal }: ModalRenderProps & { modal: Extract<DevtoolsModalState, { layer: 'session' }> }) {
+function SessionDumpLayer({ modal }: ModalRenderProps<Extract<DevtoolsModalState, { layer: 'session' }>>) {
   const rows = Math.max(1, Math.min(DEVTOOLS_MAX_ROWS, modal.lines.length));
   const maxScroll = Math.max(0, modal.lines.length - rows);
   const scroll = Math.min(modal.scroll, maxScroll);
@@ -201,36 +199,36 @@ function SessionDumpLayer({ modal }: ModalRenderProps & { modal: Extract<Devtool
   );
 }
 
-function isOptionsLayer({ modal }: ModalInputProps) {
-  return (modal as DevtoolsModalState).layer === 'options';
+function isOptionsLayer({ modal }: ModalInputProps<DevtoolsModalState>) {
+  return modal.layer === 'options';
 }
 
-function isSessionLayer({ modal }: ModalInputProps) {
-  return (modal as DevtoolsModalState).layer === 'session';
+function isSessionLayer({ modal }: ModalInputProps<DevtoolsModalState>) {
+  return modal.layer === 'session';
 }
 
-function isEraseLayer({ modal }: ModalInputProps) {
-  return (modal as DevtoolsModalState).layer === 'erase';
+function isEraseLayer({ modal }: ModalInputProps<DevtoolsModalState>) {
+  return modal.layer === 'erase';
 }
 
-function isResultLayer({ modal }: ModalInputProps) {
-  return (modal as DevtoolsModalState).layer === 'result';
+function isResultLayer({ modal }: ModalInputProps<DevtoolsModalState>) {
+  return modal.layer === 'result';
 }
 
-function isOptionsInput(props: ModalInputProps) {
+function isOptionsInput(props: ModalInputProps<DevtoolsModalState>) {
   return isCancel(props) || isSubmit(props) || props.key.upArrow || props.key.downArrow;
 }
 
-function isSessionInput(props: ModalInputProps) {
+function isSessionInput(props: ModalInputProps<DevtoolsModalState>) {
   return isCancel(props) || props.key.leftArrow || isBackspace(props) || props.key.upArrow || props.key.downArrow;
 }
 
-function isEraseInput(props: ModalInputProps) {
+function isEraseInput(props: ModalInputProps<DevtoolsModalState>) {
   return isCancel(props) || isSubmit(props) || props.key.leftArrow || isBackspace(props) || isPlainTextInput(props);
 }
 
 function handleOptionsInput(
-  key: ModalInputProps['key'],
+  key: ModalInputProps<DevtoolsModalState>['key'],
   state: Extract<DevtoolsModalState, { layer: 'options' }>,
   context: ModalContext,
 ) {
@@ -272,7 +270,7 @@ function handleOptionsInput(
 }
 
 function handleSessionInput(
-  key: ModalInputProps['key'],
+  key: ModalInputProps<DevtoolsModalState>['key'],
   state: Extract<DevtoolsModalState, { layer: 'session' }>,
   context: ModalContext,
 ) {
@@ -301,7 +299,7 @@ function handleSessionInput(
 
 function handleEraseInput(
   input: string,
-  key: ModalInputProps['key'],
+  key: ModalInputProps<DevtoolsModalState>['key'],
   state: Extract<DevtoolsModalState, { layer: 'erase' }>,
   context: ModalContext,
 ) {

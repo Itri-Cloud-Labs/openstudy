@@ -1,15 +1,15 @@
 import { Box, Text } from 'ink';
 import { createHandleInput, isCancel, isSubmit } from './input.js';
-import type { ModalRenderProps, ModalState } from './types.js';
+import type { ModalContext, ModalRenderProps } from './types.js';
 import { THEME } from '../shared/theme.js';
 
-interface MessageModalState extends ModalState {
+interface MessageModalState {
   id: 'message';
   title: string;
   message: string;
 }
 
-export function open(_context: unknown, initialState?: Record<string, unknown>): ModalState {
+export function open(_context: ModalContext, initialState?: Record<string, unknown>): MessageModalState {
   return {
     id: 'message',
     title: typeof initialState?.['title'] === 'string' ? initialState['title'] : 'Message',
@@ -21,8 +21,8 @@ export function getHeight() {
   return 7;
 }
 
-export function render({ modal, context }: ModalRenderProps) {
-  const state = modal as MessageModalState;
+export function render({ modal, context }: ModalRenderProps<MessageModalState>) {
+  const state = modal;
 
   return (
     <>
@@ -45,7 +45,7 @@ export function render({ modal, context }: ModalRenderProps) {
   );
 }
 
-export const handleInput = createHandleInput([
+export const handleInput = createHandleInput<MessageModalState>([
   {
     when: props => isCancel(props) || isSubmit(props),
     run: ({ context }) => context.closeModal(),

@@ -1,6 +1,6 @@
 import { Box, Text } from 'ink';
 import { createHandleInput, isBackspace, isCancel, isPlainTextInput, isSubmit } from './input.js';
-import type { ModalContext, ModalInputProps, ModalRenderProps, ModalState } from './types.js';
+import type { ModalContext, ModalInputProps, ModalRenderProps } from './types.js';
 import { THEME } from '../shared/theme.js';
 
 const LANGUAGE_MODAL_MAX_ROWS = 8;
@@ -22,13 +22,13 @@ const LANGUAGES = [
   'Turkish',
 ];
 
-interface LanguageModalState extends ModalState {
+interface LanguageModalState {
   id: 'language';
   filter: string;
   selected: number;
 }
 
-export function open(context: ModalContext): ModalState {
+export function open(context: ModalContext): LanguageModalState {
   const selected = Math.max(
     0,
     LANGUAGES.findIndex(language => language === context.session.studyLanguage),
@@ -37,14 +37,14 @@ export function open(context: ModalContext): ModalState {
   return { id: 'language', filter: '', selected };
 }
 
-export function getHeight(modal: ModalState) {
-  const filteredLanguages = getFilteredLanguages(modal as LanguageModalState);
+export function getHeight(modal: LanguageModalState) {
+  const filteredLanguages = getFilteredLanguages(modal);
   const rows = Math.max(1, Math.min(LANGUAGE_MODAL_MAX_ROWS, filteredLanguages.length));
   return rows + 7;
 }
 
-export function render({ modal, context }: ModalRenderProps) {
-  const state = modal as LanguageModalState;
+export function render({ modal, context }: ModalRenderProps<LanguageModalState>) {
+  const state = modal;
   const subjectColor = context.selectedSubject?.color ?? '#3b82f6';
   const filteredLanguages = getFilteredLanguages(state);
   const rows = Math.max(1, Math.min(LANGUAGE_MODAL_MAX_ROWS, filteredLanguages.length));
@@ -98,7 +98,7 @@ export function render({ modal, context }: ModalRenderProps) {
   );
 }
 
-export const handleInput = createHandleInput([
+export const handleInput = createHandleInput<LanguageModalState>([
   {
     when: isCancel,
     run: ({ context }) => context.closeModal(),
@@ -118,29 +118,27 @@ export const handleInput = createHandleInput([
   {
     when: isBackspace,
     run: ({ modal, context }) => {
-      const state = modal as LanguageModalState;
-      context.updateModal({ ...state, filter: state.filter.slice(0, -1), selected: 0 });
+      context.updateModal({ ...modal, filter: modal.filter.slice(0, -1), selected: 0 });
     },
   },
   {
     when: isPlainTextInput,
     run: ({ input, modal, context }) => {
-      const state = modal as LanguageModalState;
-      context.updateModal({ ...state, filter: state.filter + input, selected: 0 });
+      context.updateModal({ ...modal, filter: modal.filter + input, selected: 0 });
     },
   },
 ]);
 
-function selectLanguage({ modal, context }: ModalInputProps) {
-  const state = modal as LanguageModalState;
+function selectLanguage({ modal, context }: ModalInputProps<LanguageModalState>) {
+  const state = modal;
   const filteredLanguages = getFilteredLanguages(state);
   const language = filteredLanguages[state.selected];
   if (language) context.updateSettings({ studyLanguage: language });
   context.closeModal();
 }
 
-function moveSelection({ modal, context }: ModalInputProps, direction: -1 | 1) {
-  const state = modal as LanguageModalState;
+function moveSelection({ modal, context }: ModalInputProps<LanguageModalState>, direction: -1 | 1) {
+  const state = modal;
   const filteredLanguages = getFilteredLanguages(state);
   const count = Math.max(1, filteredLanguages.length);
   context.updateModal({ ...state, selected: (state.selected + direction + count) % count });

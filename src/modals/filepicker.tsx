@@ -3,7 +3,7 @@ import { materialService, type MaterialEntry } from '../infrastructure/materials
 import { truncateError } from '../shared/text.js';
 import { focusTextColor } from '../utils/index.js';
 import { createHandleInput, isBackspace, isCancel, isPlainTextInput, isSubmit } from './input.js';
-import type { ModalContext, ModalInputProps, ModalRenderProps, ModalState } from './types.js';
+import type { ModalContext, ModalInputProps, ModalRenderProps } from './types.js';
 import { THEME } from '../shared/theme.js';
 
 const FILE_PICKER_MAX_ROWS = 10;
@@ -19,12 +19,12 @@ type FilePickerModalState =
   | { id: 'filepicker'; layer: 'browser'; cwd: string; entries: FilePickerEntry[]; selected: number; error?: string }
   | { id: 'filepicker'; layer: 'url'; url: string; downloading: boolean; error?: string };
 
-export function open(_context: ModalContext): ModalState {
+export function open(_context: ModalContext): FilePickerModalState {
   return { id: 'filepicker', layer: 'source', selected: 0 };
 }
 
-export function getHeight(modal: ModalState) {
-  const state = modal as FilePickerModalState;
+export function getHeight(modal: FilePickerModalState) {
+  const state = modal;
   if (state.layer === 'source') return SOURCE_OPTIONS.length + 7;
   if (state.layer === 'url') return 8;
 
@@ -32,18 +32,15 @@ export function getHeight(modal: ModalState) {
   return rows + 8;
 }
 
-export function render(props: ModalRenderProps) {
-  const state = props.modal as FilePickerModalState;
+export function render(props: ModalRenderProps<FilePickerModalState>) {
+  const state = props.modal;
 
   if (state.layer === 'source') return <SourceLayer {...props} modal={state} />;
   if (state.layer === 'url') return <UrlLayer modal={state} />;
   return <BrowserLayer {...props} modal={state} />;
 }
 
-function SourceLayer({
-  modal,
-  context,
-}: ModalRenderProps & { modal: Extract<FilePickerModalState, { layer: 'source' }> }) {
+function SourceLayer({ modal, context }: ModalRenderProps<Extract<FilePickerModalState, { layer: 'source' }>>) {
   const subjectColor = context.selectedSubject?.color ?? '#3b82f6';
 
   return (
@@ -105,10 +102,7 @@ function UrlLayer({ modal }: { modal: Extract<FilePickerModalState, { layer: 'ur
   );
 }
 
-function BrowserLayer({
-  modal,
-  context,
-}: ModalRenderProps & { modal: Extract<FilePickerModalState, { layer: 'browser' }> }) {
+function BrowserLayer({ modal, context }: ModalRenderProps<Extract<FilePickerModalState, { layer: 'browser' }>>) {
   const state = modal;
   const subjectColor = context.selectedSubject?.color ?? '#3b82f6';
   const rows = Math.max(1, Math.min(FILE_PICKER_MAX_ROWS, state.entries.length));
@@ -170,54 +164,55 @@ function BrowserLayer({
   );
 }
 
-export const handleInput = createHandleInput([
+export const handleInput = createHandleInput<FilePickerModalState>([
   {
     when: isCancel,
     run: ({ context }) => context.closeModal(),
   },
   {
     when: props => isSourceLayer(props) && isSourceInput(props),
-    run: props =>
-      handleSourceInput(props.key, props.modal as Extract<FilePickerModalState, { layer: 'source' }>, props.context),
+    run: props => {
+      if (props.modal.layer !== 'source') return;
+      handleSourceInput(props.key, props.modal, props.context);
+    },
   },
   {
     when: props => isBrowserLayer(props) && isBrowserInput(props),
-    run: props =>
-      handleBrowserInput(props.key, props.modal as Extract<FilePickerModalState, { layer: 'browser' }>, props.context),
+    run: props => {
+      if (props.modal.layer !== 'browser') return;
+      handleBrowserInput(props.key, props.modal, props.context);
+    },
   },
   {
     when: props => isUrlLayer(props) && isUrlInput(props),
-    run: props =>
-      handleUrlInput(
-        props.input,
-        props.key,
-        props.modal as Extract<FilePickerModalState, { layer: 'url' }>,
-        props.context,
-      ),
+    run: props => {
+      if (props.modal.layer !== 'url') return;
+      handleUrlInput(props.input, props.key, props.modal, props.context);
+    },
   },
 ]);
 
-function isSourceLayer({ modal }: ModalInputProps) {
-  return (modal as FilePickerModalState).layer === 'source';
+function isSourceLayer({ modal }: ModalInputProps<FilePickerModalState>) {
+  return modal.layer === 'source';
 }
 
-function isBrowserLayer({ modal }: ModalInputProps) {
-  return (modal as FilePickerModalState).layer === 'browser';
+function isBrowserLayer({ modal }: ModalInputProps<FilePickerModalState>) {
+  return modal.layer === 'browser';
 }
 
-function isUrlLayer({ modal }: ModalInputProps) {
-  return (modal as FilePickerModalState).layer === 'url';
+function isUrlLayer({ modal }: ModalInputProps<FilePickerModalState>) {
+  return modal.layer === 'url';
 }
 
-function isSourceInput(props: ModalInputProps) {
+function isSourceInput(props: ModalInputProps<FilePickerModalState>) {
   return isSubmit(props) || props.key.upArrow || props.key.downArrow;
 }
 
-function isBrowserInput(props: ModalInputProps) {
+function isBrowserInput(props: ModalInputProps<FilePickerModalState>) {
   return isSubmit(props) || props.key.leftArrow || isBackspace(props) || props.key.upArrow || props.key.downArrow;
 }
 
-function isUrlInput(props: ModalInputProps) {
+function isUrlInput(props: ModalInputProps<FilePickerModalState>) {
   return (
     isSubmit(props) ||
     props.key.leftArrow ||

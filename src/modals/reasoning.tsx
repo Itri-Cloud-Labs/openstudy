@@ -2,7 +2,7 @@ import { Box, Text } from 'ink';
 import { createProvider, type ProviderReasoningLevel } from '../providers/index.js';
 import { focusTextColor } from '../utils/index.js';
 import { createHandleInput, isCancel, isSubmit } from './input.js';
-import type { ModalContext, ModalInputProps, ModalRenderProps, ModalState } from './types.js';
+import type { ModalContext, ModalInputProps, ModalRenderProps } from './types.js';
 import { THEME } from '../shared/theme.js';
 
 const REASONING_MODAL_MAX_ROWS = 6;
@@ -11,7 +11,7 @@ type ReasoningModalState =
   | { id: 'reasoning'; selected: number; levels: ProviderReasoningLevel[]; model: string; providerLabel: string }
   | { id: 'reasoning'; selected: number; levels: []; error: string };
 
-export function open(context: ModalContext): ModalState {
+export function open(context: ModalContext): ReasoningModalState {
   const selectedModel = context.selectedModel;
 
   if (!selectedModel) {
@@ -43,14 +43,14 @@ export function open(context: ModalContext): ModalState {
   };
 }
 
-export function getHeight(modal: ModalState) {
-  const state = modal as ReasoningModalState;
+export function getHeight(modal: ReasoningModalState) {
+  const state = modal;
   const rows = Math.max(1, Math.min(REASONING_MODAL_MAX_ROWS, state.levels.length));
   return rows + 7;
 }
 
-export function render({ modal, context }: ModalRenderProps) {
-  const state = modal as ReasoningModalState;
+export function render({ modal, context }: ModalRenderProps<ReasoningModalState>) {
+  const state = modal;
 
   if ('error' in state) {
     return (
@@ -113,7 +113,7 @@ export function render({ modal, context }: ModalRenderProps) {
   );
 }
 
-export const handleInput = createHandleInput([
+export const handleInput = createHandleInput<ReasoningModalState>([
   {
     when: isCancel,
     run: ({ context }) => context.closeModal(),
@@ -132,8 +132,8 @@ export const handleInput = createHandleInput([
   },
 ]);
 
-function selectReasoningLevel({ modal, context }: ModalInputProps) {
-  const state = modal as ReasoningModalState;
+function selectReasoningLevel({ modal, context }: ModalInputProps<ReasoningModalState>) {
+  const state = modal;
   if ('error' in state) {
     context.closeModal();
     return;
@@ -144,8 +144,8 @@ function selectReasoningLevel({ modal, context }: ModalInputProps) {
   context.closeModal();
 }
 
-function moveSelection({ modal, context }: ModalInputProps, direction: -1 | 1) {
-  const state = modal as ReasoningModalState;
+function moveSelection({ modal, context }: ModalInputProps<ReasoningModalState>, direction: -1 | 1) {
+  const state = modal;
   if ('error' in state || state.levels.length === 0) return;
 
   context.updateModal({ ...state, selected: (state.selected + direction + state.levels.length) % state.levels.length });

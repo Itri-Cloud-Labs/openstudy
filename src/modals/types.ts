@@ -34,10 +34,8 @@ export type OpenModal = <Id extends ModalId>(id: Id, initialState?: ModalInitial
 
 export type ModalScreen = 'home' | 'session';
 
-export interface ModalState {
-  id: ModalId;
-  [key: string]: unknown;
-}
+/** Base constraint every modal state must satisfy; concrete states narrow `id`. */
+export type ModalState = { id: ModalId };
 
 export type ModalInputKey = Parameters<Parameters<typeof useInput>[0]>[1];
 
@@ -59,19 +57,16 @@ export interface ModalContext {
   selectedModel: SelectedModel | null;
   openModal: OpenModal;
   closeModal: () => void;
-  updateModal: (updater: ModalState | ((current: ModalState) => ModalState)) => void;
+  updateModal: <S extends ModalState>(updater: S | ((current: S) => S)) => void;
   updateSettings: (patch: Partial<SessionSettings>) => SessionSettings;
   setSession: (sessionId: string) => SessionSettings | null;
 }
 
-export interface ModalModule {
-  open: (
-    context: ModalContext,
-    initialState?: Record<string, unknown>,
-  ) => ModalState | null | Promise<ModalState | null>;
-  getHeight: (modal: ModalState) => number;
-  render: (props: ModalRenderProps) => React.ReactNode;
-  handleInput?: (props: ModalInputProps) => boolean;
+export interface ModalModule<S extends ModalState = ModalState> {
+  open(context: ModalContext, initialState?: Record<string, unknown>): S | null | Promise<S | null>;
+  getHeight(modal: S): number;
+  render(props: ModalRenderProps<S>): React.ReactNode;
+  handleInput?(props: ModalInputProps<S>): boolean;
 }
 
 export interface ModalManifest<Id extends ModalId = ModalId> {
@@ -85,15 +80,15 @@ export interface ModalRenderContext extends ModalContext {
   isProviderConfigured: (provider: Provider) => boolean;
 }
 
-export interface ModalRenderProps {
-  modal: ModalState;
+export interface ModalRenderProps<S extends ModalState = ModalState> {
+  modal: S;
   context: ModalRenderContext;
 }
 
-export interface ModalInputProps {
+export interface ModalInputProps<S extends ModalState = ModalState> {
   input: string;
   key: ModalInputKey;
-  modal: ModalState;
+  modal: S;
   context: ModalRenderContext;
 }
 
