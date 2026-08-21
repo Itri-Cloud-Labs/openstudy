@@ -1,105 +1,33 @@
-# Codex Provider
+# Codex provider
 
-`CodexProvider` wraps the OpenAI Codex SDK and exposes the shared `AIProvider` interface used by OpenStudy providers.
-
-## Import
+OpenStudy registers Codex in `src/infrastructure/providers/registry.ts`. Most callers should use the shared registry instead of constructing the adapter directly.
 
 ```ts
-import { CodexProvider } from '../src/providers/codex.js';
+import { createProvider, getAvailableProviders } from '../../src/providers/index.js';
+
+const providers = getAvailableProviders();
+const codex = createProvider('codex');
 ```
 
-Provider discovery is available from the provider index.
+The compatibility adapter supports the existing `AIProvider` interface:
 
 ```ts
-import { createProvider, getAvailableProviders } from '../src/providers/index.js';
+await codex.CheckLoginStatus();
 
-const available = getAvailableProviders();
-const provider = createProvider('codex');
-```
-
-## Basic Usage
-
-```ts
-const provider = new CodexProvider();
-
-await provider.login();
-
-const result = await provider.prompt('Explain recursion with a short example.');
-
-console.log(result.text);
-console.log(result.threadId);
-```
-
-## Continue A Thread
-
-Pass the returned `threadId` back into `prompt()` to continue the same Codex conversation.
-
-```ts
-const first = await provider.prompt('Help me plan a study session about photosynthesis.');
-
-const second = await provider.prompt('Turn that into a quiz.', {
-  threadId: first.threadId ?? undefined,
-});
-```
-
-## Options
-
-`prompt()` accepts `CodexPromptOptions`, which extends the base provider options.
-
-```ts
-await provider.prompt('Review this workspace and suggest next steps.', {
+for await (const event of codex.Prompt('Explain recursion.', {
   model: 'gpt-5.5',
-  workingDirectory: process.cwd(),
   reasoningEffort: 'medium',
-  sandboxMode: 'read-only',
-  approvalPolicy: 'on-request',
-  networkAccessEnabled: false,
-  webSearchMode: 'disabled',
-});
-```
-
-## Model Options
-
-Use `GetModelOptions()` when a caller needs selectable model rows. Each model option includes the exact model id accepted by the Codex SDK and the reasoning levels available for that specific model.
-
-```ts
-const options = provider.GetModelOptions();
-const option = options[0];
-const reasoning = option?.reasoningLevels.find(level => level.value === 'medium');
-
-await provider.prompt('Explain this topic.', {
-  model: option?.model,
-  reasoningEffort: reasoning?.value as never,
-});
-```
-
-`GetModelsList()` returns the unique Codex model ids, such as `gpt-5.5` and `gpt-5.4`.
-
-## Default Safety Settings
-
-The provider currently starts Codex threads with assisted, conservative defaults:
-
-- `sandboxMode: 'read-only'`
-- `approvalPolicy: 'on-request'`
-- `networkAccessEnabled: false`
-- `webSearchMode: 'disabled'`
-- `skipGitRepoCheck: true`
-
-Callers can override these values through `CodexPromptOptions` when a workflow needs more access.
-
-## Streaming
-
-Use `streamPrompt()` when the caller needs raw Codex thread events.
-
-```ts
-for await (const event of provider.streamPrompt('Inspect the current project.')) {
+  workingDirectory: process.cwd(),
+})) {
   console.log(event);
 }
 ```
 
-## Authentication
+New infrastructure code should use the methods from `StudyProvider`: `checkAuth`, `listModels`, `streamPrompt`, and `dispose`. These methods accept abort signals where the operation can wait on a subprocess, provider server, or model response.
 
-`login()` and `prompt()` call `CheckAuth()`, which checks the local Codex login state. If Codex is not authenticated, the provider throws `CODEX_LOGIN_REQUIRED_MESSAGE`.
+Codex uses read-only sandboxing and an approval policy of `never` for study requests. File options attach local study material, while `responseSchema` requests structured output. Authentication uses the local Codex login or `OPENAI_API_KEY`.
+
+The registry owns provider metadata, factories, and cleanup. Add a provider in one registration and test it with a fake adapter before wiring a real SDK.
 
 Authenticate outside OpenStudy with:
 

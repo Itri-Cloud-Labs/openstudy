@@ -1,35 +1,13 @@
-export type Provider =
-  | 'codex'
-  | 'opencode';
+import type { Provider, ProviderConfig } from '../domain/provider.js';
+import { PROVIDER_METADATA } from '../infrastructure/providers/index.js';
 
-export interface ProviderMeta {
-  id: Provider;
-  label: string;
-  requiresKey: boolean;
-}
+export type { Provider, ProviderConfig } from '../domain/provider.js';
+export type { SessionSettings } from '../domain/study.js';
+export type { ProviderMetadata as ProviderMeta } from '../infrastructure/providers/contracts.js';
 
-export interface Config {
+export interface Config extends ProviderConfig {
   provider: Provider;
-  apiKey: string;
 }
 
-export interface SessionSettings {
-  sessionId: string | null;
-  title: string | null;
-  summaryText: string | null;
-  createdDate: string | null;
-  lastOpenedDate: string | null;
-  provider: Provider | null;
-  apiKey: string;
-  subject: string;
-  modelProvider: Provider | null;
-  model: string | null;
-  reasoningEffort: string | null;
-  material: string | null;
-  studyLanguage: string | null;
-}
-
-export const PROVIDERS: ProviderMeta[] = [
-  { id: 'codex', label: 'Codex', requiresKey: false },
-  { id: 'opencode', label: 'OpenCode', requiresKey: false },
-];
+/** Compatibility name used by existing selectors. Metadata is owned by the provider registry. */
+export const PROVIDERS = PROVIDER_METADATA;

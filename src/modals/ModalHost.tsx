@@ -1,4 +1,4 @@
-import React from 'react';
+import type React from 'react';
 import { Box } from 'ink';
 import type { ActiveModal, ModalRenderContext } from './types.js';
 

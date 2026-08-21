@@ -1,4 +1,3 @@
-import React from 'react';
 import { Box, Text } from 'ink';
 import { subjects } from '../options/index.js';
 import { focusTextColor } from '../utils/index.js';
@@ -43,7 +42,9 @@ export function render({ modal, context }: ModalRenderProps) {
   return (
     <>
       <Box justifyContent="space-between" marginBottom={1}>
-        <Text color="#f0f0f0" bold>Select Subject</Text>
+        <Text color="#f0f0f0" bold>
+          Select Subject
+        </Text>
         <Text color="#777777">esc</Text>
       </Box>
       <Box marginBottom={1}>
@@ -54,20 +55,28 @@ export function render({ modal, context }: ModalRenderProps) {
       <Box flexDirection="column" marginBottom={1}>
         {filteredSubjects.length === 0 ? (
           <Text color="#777777">No results found</Text>
-        ) : visibleSubjects.map((subject, index) => {
-          const subjectIndex = subjectWindowStart + index;
-          const isSelected = state.selected === subjectIndex;
+        ) : (
+          visibleSubjects.map((subject, index) => {
+            const subjectIndex = subjectWindowStart + index;
+            const isSelected = state.selected === subjectIndex;
 
             return (
               <Box key={subject.name} backgroundColor={isSelected ? subjectColor : undefined}>
-              <Text color={focusTextColor(subject.color, subjectColor, isSelected)} bold={isSelected}>● </Text>
-              <Text color={isSelected ? '#000000' : '#f0f0f0'} bold={isSelected}>{subject.name}</Text>
-            </Box>
-          );
-        })}
+                <Text color={focusTextColor(subject.color, subjectColor, isSelected)} bold={isSelected}>
+                  ●{' '}
+                </Text>
+                <Text color={isSelected ? '#000000' : '#f0f0f0'} bold={isSelected}>
+                  {subject.name}
+                </Text>
+              </Box>
+            );
+          })
+        )}
       </Box>
       <Box justifyContent="space-between">
-        <Text color="#777777">↑↓ move {subjectWindowStart + 1}-{subjectWindowStart + visibleSubjects.length}/{filteredSubjects.length}</Text>
+        <Text color="#777777">
+          ↑↓ move {subjectWindowStart + 1}-{subjectWindowStart + visibleSubjects.length}/{filteredSubjects.length}
+        </Text>
         <Text color="#777777">enter select</Text>
       </Box>
     </>

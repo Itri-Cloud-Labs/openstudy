@@ -6,7 +6,7 @@ export interface CommandConfig {
 export interface CommandContext {
   onExit: () => void;
   onSetup: () => void;
-  openModal: (id: string, modal?: Record<string, unknown>) => void | Promise<void>;
+  openModal: OpenModal;
   closeModal: () => void;
 }
 
@@ -14,3 +14,4 @@ export interface CommandModule {
   config: CommandConfig;
   execute: (context: CommandContext) => void | Promise<void>;
 }
+import type { OpenModal } from '../modals/types.js';

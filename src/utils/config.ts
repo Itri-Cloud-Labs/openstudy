@@ -1,141 +1,120 @@
-import fs from 'fs';
-import path from 'path';
 import os from 'os';
-import { subjects } from '../options/index.js';
-import { PROVIDERS, type Config, type Provider, type SessionSettings } from '../types/index.js';
+import path from 'path';
+import {
+  createDefaultAppPreferences,
+  preferencesFromSessionSettings,
+  sessionSettingsFromDomain,
+  type AppPreferences,
+  type ProviderConfig,
+} from '../domain/index.js';
+import {
+  createPersistence,
+  type MigrationReport,
+  type OpenStudyPersistence,
+} from '../infrastructure/persistence/index.js';
+import type { Config, SessionSettings } from '../types/index.js';
 
-const CONFIG_DIR  = path.join(os.homedir(), '.openstudy');
+const CONFIG_DIR = path.join(os.homedir(), '.openstudy');
 const CONFIG_FILE = path.join(CONFIG_DIR, 'config.json');
 const SESSION_FILE = path.join(CONFIG_DIR, 'session.json');
 
-const DEFAULT_SESSION: SessionSettings = {
-  sessionId: null,
-  title: null,
-  summaryText: null,
-  createdDate: null,
-  lastOpenedDate: null,
-  provider: null,
-  apiKey: '',
-  subject: subjects.find(subject => subject.default)?.name ?? subjects[0]?.name ?? 'General',
-  modelProvider: null,
-  model: null,
-  reasoningEffort: null,
-  material: null,
-  studyLanguage: null,
-};
+const persistence = createPersistence({ rootDir: CONFIG_DIR });
 
-function ensureConfigDir(): void {
-  if (!fs.existsSync(CONFIG_DIR)) {
-    fs.mkdirSync(CONFIG_DIR, { recursive: true });
-  }
+const DEFAULT_SESSION: SessionSettings = sessionSettingsFromDomain(createDefaultAppPreferences(), null);
+
+/**
+ * Explicit bootstrap for versioned storage. Reads intentionally do not call
+ * this function so rendering and inspection never mutate the filesystem.
+ */
+export function initializePersistence(): MigrationReport {
+  return persistence.initialize();
 }
 
-function isProvider(value: unknown): value is Provider {
-  return typeof value === 'string' && PROVIDERS.some(provider => provider.id === value);
+export const migratePersistence = initializePersistence;
+
+export function getPersistence(): OpenStudyPersistence {
+  return persistence;
 }
 
-function normalizeSession(value: unknown): SessionSettings {
-  const raw = value && typeof value === 'object' ? value as Partial<SessionSettings> : {};
-  const subject = typeof raw.subject === 'string' && raw.subject.trim().length > 0
-    ? raw.subject
-    : DEFAULT_SESSION.subject;
-
-  return {
-    sessionId: null,
-    title: null,
-    summaryText: null,
-    createdDate: typeof raw.createdDate === 'string' ? raw.createdDate : null,
-    lastOpenedDate: typeof raw.lastOpenedDate === 'string' ? raw.lastOpenedDate : null,
-    provider: isProvider(raw.provider) ? raw.provider : DEFAULT_SESSION.provider,
-    apiKey: typeof raw.apiKey === 'string' ? raw.apiKey : DEFAULT_SESSION.apiKey,
-    subject,
-    modelProvider: isProvider(raw.modelProvider) ? raw.modelProvider : DEFAULT_SESSION.modelProvider,
-    model: typeof raw.model === 'string' && raw.model.trim().length > 0 ? raw.model : DEFAULT_SESSION.model,
-    reasoningEffort: typeof raw.reasoningEffort === 'string' && raw.reasoningEffort.trim().length > 0 ? raw.reasoningEffort : DEFAULT_SESSION.reasoningEffort,
-    material: typeof raw.material === 'string' && raw.material.trim().length > 0 ? raw.material : DEFAULT_SESSION.material,
-    studyLanguage: typeof raw.studyLanguage === 'string' && raw.studyLanguage.trim().length > 0 ? raw.studyLanguage : DEFAULT_SESSION.studyLanguage,
-  };
-}
-
-function readConfigFile(): Config | null {
-  if (!configExists()) return null;
-
-  try {
-    const raw = fs.readFileSync(CONFIG_FILE, 'utf8');
-    const config = JSON.parse(raw) as Config;
-    if (!isProvider(config.provider) || typeof config.apiKey !== 'string') return null;
-    return config;
-  } catch {
-    return null;
-  }
+export function isFirstLaunch(): boolean {
+  return persistence.isFirstLaunch();
 }
 
 export function loadSession(): SessionSettings {
-  ensureConfigDir();
+  const storedPreferences = persistence.readAppPreferences();
+  const preferences = storedPreferences?.preferences ?? createDefaultAppPreferences();
+  const session = sessionSettingsFromDomain(preferences, persistence.readProviderConfig());
 
-  if (!fs.existsSync(SESSION_FILE)) {
-    const legacyConfig = readConfigFile();
-    const now = new Date().toISOString();
-    const session = legacyConfig
-      ? { ...DEFAULT_SESSION, provider: legacyConfig.provider, apiKey: legacyConfig.apiKey, createdDate: now, lastOpenedDate: now }
-      : { ...DEFAULT_SESSION, createdDate: now, lastOpenedDate: now };
-
-    saveSession(session);
-    return session;
-  }
-
-  try {
-    const raw = fs.readFileSync(SESSION_FILE, 'utf8');
-    const now = new Date().toISOString();
-    const normalizedSession = normalizeSession(JSON.parse(raw));
-    const session = {
-      ...normalizedSession,
-      lastOpenedDate: now,
-    };
-    saveSession(session);
-    return session;
-  } catch {
-    const now = new Date().toISOString();
-    const session = { ...DEFAULT_SESSION, createdDate: now, lastOpenedDate: now };
-    saveSession(session);
-    return session;
-  }
+  return {
+    ...session,
+    createdDate: storedPreferences?.createdAt ?? null,
+    lastOpenedDate: storedPreferences?.updatedAt ?? null,
+  };
 }
 
 export function saveSession(session: SessionSettings): void {
-  ensureConfigDir();
-  fs.writeFileSync(SESSION_FILE, JSON.stringify({
-    ...session,
-    sessionId: null,
-    title: null,
-    summaryText: null,
-  }, null, 2), 'utf8');
+  persistence.writeProviderConfig({
+    provider: session.provider,
+    apiKey: session.apiKey,
+  });
+  persistence.writeAppPreferences(preferencesFromSessionSettings(session), {
+    createdAt: session.createdDate,
+    updatedAt: session.lastOpenedDate,
+  });
 }
 
 export function updateSettings(patch: Partial<SessionSettings>): SessionSettings {
-  const next = { ...loadSession(), ...patch };
-  saveSession(next);
-  return next;
+  const current = loadSession();
+  const next = { ...current, ...patch };
+  const providerChanged = 'provider' in patch || 'apiKey' in patch;
+  const preferencesChanged = hasPreferencesPatch(patch);
+
+  if (providerChanged) {
+    persistence.writeProviderConfig({ provider: next.provider, apiKey: next.apiKey });
+  }
+
+  if (preferencesChanged) {
+    persistence.writeAppPreferences(preferencesFromSessionSettings(next), {
+      createdAt: current.createdDate,
+    });
+  }
+
+  return loadSession();
 }
 
 export function configExists(): boolean {
-  return fs.existsSync(CONFIG_FILE);
+  return loadConfig() !== null;
 }
 
 export function loadConfig(): Config | null {
-  const session = loadSession();
-  if (session.provider) return { provider: session.provider, apiKey: session.apiKey };
-
-  return readConfigFile();
+  const config = persistence.readProviderConfig();
+  return config?.provider ? { provider: config.provider, apiKey: config.apiKey } : null;
 }
 
 export function saveConfig(config: Config): void {
-  ensureConfigDir();
-  fs.writeFileSync(CONFIG_FILE, JSON.stringify(config, null, 2), 'utf8');
-
-  const session = loadSession();
-  saveSession({ ...session, provider: config.provider, apiKey: config.apiKey });
+  persistence.writeProviderConfig(config);
 }
 
+export function createPersistenceForRoot(
+  rootDir: string,
+  options: { clock?: () => Date; idGenerator?: () => string } = {},
+): OpenStudyPersistence {
+  return createPersistence({ rootDir, ...options });
+}
+
+function hasPreferencesPatch(patch: Partial<SessionSettings>): boolean {
+  const preferenceKeys = [
+    'subject',
+    'modelProvider',
+    'model',
+    'reasoningEffort',
+    'material',
+    'studyLanguage',
+  ] satisfies Array<keyof SessionSettings>;
+
+  return preferenceKeys.some(key => key in patch);
+}
+
+export type { AppPreferences, ProviderConfig };
 export { CONFIG_FILE, CONFIG_DIR, SESSION_FILE };
 export { DEFAULT_SESSION };

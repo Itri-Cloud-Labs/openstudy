@@ -1,4 +1,3 @@
-import React from 'react';
 import { Box, Text } from 'ink';
 import { createHandleInput, isCancel, isSubmit } from './input.js';
 import type { ModalRenderProps, ModalState } from './types.js';
@@ -27,14 +26,19 @@ export function render({ modal, context }: ModalRenderProps) {
   return (
     <>
       <Box justifyContent="space-between" marginBottom={1}>
-        <Text color="#f0f0f0" bold>{state.title}</Text>
+        <Text color="#f0f0f0" bold>
+          {state.title}
+        </Text>
         <Text color="#777777">esc</Text>
       </Box>
       <Box marginBottom={1}>
         <Text color="#b0b0b6">{state.message}</Text>
       </Box>
       <Box justifyContent="flex-end">
-        <Text color="#000000" backgroundColor={context.selectedSubject?.color ?? '#3b82f6'}>  ok  </Text>
+        <Text color="#000000" backgroundColor={context.selectedSubject?.color ?? '#3b82f6'}>
+          {' '}
+          ok{' '}
+        </Text>
       </Box>
     </>
   );

@@ -1,38 +1,68 @@
-export { CodexProvider, CODEX_LOGIN_REQUIRED_MESSAGE, CODEX_MODEL_OPTIONS, CODEX_MODELS, closeCodexProvider, type CodexPromptOptions } from './codex.js';
-export { OpenCodeProvider, OPENCODE_LOGIN_REQUIRED_MESSAGE, OPENCODE_MODEL_OPTIONS, OPENCODE_MODELS, closeOpenCodeProvider } from './opencode.js';
-export type { AIProvider, ProviderConstructor, ProviderDefinition, ProviderModelOption, ProviderPromptOptions, ProviderReasoningLevel } from './types.js';
-
-import { closeCodexProvider, CodexProvider } from './codex.js';
-import { closeOpenCodeProvider, OpenCodeProvider } from './opencode.js';
-import { PROVIDERS, type Provider } from '../types/index.js';
+import type { Provider } from '../domain/provider.js';
+import { CodexProvider, OpenCodeProvider, providerRegistry } from '../infrastructure/providers/index.js';
 import type { AIProvider, ProviderDefinition } from './types.js';
 
-const providerClasses = {
+export type { Provider, ProviderConfig } from '../domain/provider.js';
+export {
+  CODEX_LOGIN_REQUIRED_MESSAGE,
+  CODEX_MODEL_OPTIONS,
+  CODEX_MODELS,
+  CONTEXT_OVERFLOW_MESSAGE,
+  type CodexPromptOptions,
+  CodexProvider,
+  disposeCodexProvider as closeCodexProvider,
+  disposeOpenCodeProvider as closeOpenCodeProvider,
+  normalizeProviderError,
+  OPENCODE_LOGIN_REQUIRED_MESSAGE,
+  OPENCODE_MODEL_OPTIONS,
+  OPENCODE_MODELS,
+  OpenCodeProvider,
+  PROVIDER_METADATA,
+  ProviderRegistry,
+  providerRegistry,
+} from '../infrastructure/providers/index.js';
+export type {
+  AIProvider,
+  ProviderConstructor,
+  ProviderDefinition,
+  ProviderMetadata,
+  ProviderModelOption,
+  ProviderPromptFile,
+  ProviderPromptOptions,
+  ProviderPromptStreamEvent,
+  ProviderReasoningLevel,
+  ProviderRegistration,
+  StudyProvider,
+} from './types.js';
+
+const providerConstructors = {
   codex: CodexProvider,
   opencode: OpenCodeProvider,
-} as const satisfies Record<Provider, ProviderDefinition['Provider']>;
-
-const providerDefinitions = PROVIDERS.map(provider => ({
-  ...provider,
-  Provider: providerClasses[provider.id],
-})) satisfies ProviderDefinition[];
+} as const;
 
 export function getAvailableProviders(): ProviderDefinition[] {
-  return providerDefinitions.map(provider => ({ ...provider }));
+  return providerRegistry.listMetadata().map(metadata => ({
+    ...metadata,
+    Provider: providerConstructors[metadata.id],
+  }));
 }
 
 export function getProviderDefinition(id: string): ProviderDefinition | null {
-  return providerDefinitions.find(provider => provider.id === id) ?? null;
+  const metadata = providerRegistry.getMetadata(id);
+  if (!metadata) return null;
+
+  return {
+    ...metadata,
+    Provider: providerConstructors[metadata.id],
+  };
 }
 
 export function createProvider(id: Provider): AIProvider;
 export function createProvider(id: string): AIProvider | null;
 export function createProvider(id: string): AIProvider | null {
-  const definition = getProviderDefinition(id);
-  return definition ? new definition.Provider() : null;
+  return providerRegistry.create(id);
 }
 
-export async function closeProviders() {
-  await closeCodexProvider();
-  await closeOpenCodeProvider();
+export async function closeProviders(): Promise<void> {
+  await providerRegistry.disposeAll();
 }

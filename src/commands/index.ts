@@ -5,11 +5,9 @@ import type { CommandModule } from './types.js';
 
 export type { CommandConfig, CommandContext, CommandModule } from './types.js';
 
-const commands: CommandModule[] = [
-  exitCommand,
-  sessionsCommand,
-  setupCommand,
-].sort((a, b) => a.config.name.localeCompare(b.config.name));
+const commands: CommandModule[] = [exitCommand, sessionsCommand, setupCommand].sort((a, b) =>
+  a.config.name.localeCompare(b.config.name),
+);
 
 export async function loadCommands(): Promise<CommandModule[]> {
   return commands;

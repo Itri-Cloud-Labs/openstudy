@@ -1,51 +1,25 @@
-export type ProviderPromptFile = string | {
-  path: string;
-};
+import type { Provider } from '../domain/provider.js';
+import type { LegacyCompatibleStudyProvider, ProviderMetadata } from '../infrastructure/providers/contracts.js';
 
-export interface ProviderPromptOptions {
-  system?: string;
-  model?: string;
-  threadId?: string;
-  workingDirectory?: string;
-  signal?: AbortSignal;
-  reasoningEffort?: string;
-  file?: ProviderPromptFile;
-  files?: ProviderPromptFile[];
-  responseSchema?: unknown;
-}
+export type { Provider, ProviderConfig } from '../domain/provider.js';
+export type {
+  ProviderMetadata,
+  ProviderModelOption,
+  ProviderPromptFile,
+  ProviderPromptOptions,
+  ProviderPromptStreamEvent,
+  ProviderReasoningLevel,
+  ProviderRegistration,
+  StudyProvider,
+} from '../infrastructure/providers/contracts.js';
 
-export interface ProviderPromptStreamEvent {
-  type: 'status' | 'response';
-  text: string;
-}
+/** @deprecated Depend on StudyProvider for new code. */
+export type AIProvider = LegacyCompatibleStudyProvider<Provider>;
 
-export interface ProviderReasoningLevel {
-  id: string;
-  label: string;
-  value: string;
-}
-
-export interface ProviderModelOption {
-  id: string;
-  label: string;
-  model: string;
-  reasoningLevels: ProviderReasoningLevel[];
-  group?: { id: string; name: string };
-}
-
-export interface AIProvider {
-  id: string;
-  label: string;
-  CheckLoginStatus(): Promise<boolean>;
-  GetModels(): ProviderModelOption[];
-  Prompt(input: string, options?: ProviderPromptOptions): AsyncGenerator<ProviderPromptStreamEvent>;
-}
-
+/** @deprecated Provider construction is owned by providerRegistry. */
 export type ProviderConstructor<TProvider extends AIProvider = AIProvider> = new () => TProvider;
 
-export interface ProviderDefinition<TProvider extends AIProvider = AIProvider> {
-  id: string;
-  label: string;
-  requiresKey: boolean;
+/** @deprecated Use ProviderMetadata and providerRegistry for new code. */
+export interface ProviderDefinition<TProvider extends AIProvider = AIProvider> extends ProviderMetadata<Provider> {
   Provider: ProviderConstructor<TProvider>;
 }

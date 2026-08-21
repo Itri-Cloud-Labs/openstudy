@@ -48,24 +48,24 @@ Current goals:
 
 ## Requirements
 
-- Node.js 20 or newer is recommended.
-- npm.
+- Node.js 22 or newer (required by Ink 7).
+- npm 10 or newer.
 - A terminal large enough for the TUI. The current minimum is `73x23`.
 - Codex login/configuration available locally, if you want to use the Codex provider.
 
-## Local Setup
+## Local setup
 
 Clone the repository:
 
 ```bash
-git clone <repo-url>
+git clone https://github.com/ItriIbouanane/openstudy.git
 cd openstudy
 ```
 
 Install dependencies:
 
 ```bash
-npm install
+npm ci
 ```
 
 Run the app in development mode:
@@ -86,10 +86,16 @@ Run the compiled CLI:
 npm start
 ```
 
-Reset local OpenStudy config:
+Reset OpenStudy settings while preserving saved sessions and downloaded material:
 
 ```bash
 npm run reset
+```
+
+To remove all local OpenStudy data, including saved sessions and downloaded material:
+
+```bash
+npm run reset:all -- --yes
 ```
 
 ## Usage
@@ -125,12 +131,21 @@ Important files:
 - `config.json`: provider configuration.
 - `session.json`: current subject, model, reasoning effort, material, and study language.
 
-## Development Scripts
+## Development scripts
 
 - `npm run dev`: run the TypeScript source with `tsx`.
-- `npm run build`: compile TypeScript into `dist`.
+- `npm run typecheck`: type-check source and tests without emitting files.
+- `npm run lint`: run Biome's linter.
+- `npm run format`: format supported project files.
+- `npm test`: run the test suite once.
+- `npm run test:watch`: re-run tests as files change.
+- `npm run audit`: check production dependencies for high-severity advisories.
+- `npm run build`: clean and compile TypeScript into `dist`.
+- `npm run check`: run the complete local and CI quality gate.
 - `npm start`: run `dist/index.js`.
-- `npm run reset`: remove/reset local OpenStudy configuration.
+- `npm run reset`: reset settings without deleting saved study data.
+
+See `DEVELOPMENT.md` for the full workflow, project structure, package checks, and maintenance commands.
 
 ## Contributions
 
