@@ -1,6 +1,6 @@
 import { Box, Text } from 'ink';
 import { subjects } from '../options/index.js';
-import { focusTextColor } from '../utils/index.js';
+import { focusTextColor } from '../utils/colors.js';
 import { createHandleInput, isBackspace, isCancel, isPlainTextInput, isSubmit } from './input.js';
 import type { ModalContext, ModalInputProps, ModalRenderProps } from './types.js';
 import { THEME } from '../shared/theme.js';
@@ -119,7 +119,7 @@ function selectSubject({ modal, context }: ModalInputProps<SubjectsModalState>) 
   const state = modal;
   const filteredSubjects = getFilteredSubjects(state);
   const subject = filteredSubjects[state.selected];
-  if (subject) context.updateSettings({ subject: subject.name });
+  if (subject) context.updatePreferences({ subject: subject.name });
   context.closeModal();
 }
 

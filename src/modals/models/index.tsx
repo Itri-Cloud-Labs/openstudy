@@ -173,7 +173,7 @@ function handleProvidersInput(key: ModalInputKey, state: ModelsProvidersState, c
     }
 
     if (!provider.requiresKey) {
-      context.updateSettings({ provider: provider.id, apiKey: '' });
+      context.saveProviderConfig({ provider: provider.id, apiKey: '' });
       openNextForProvider(provider.id, context, state.auth);
       return;
     }
@@ -300,11 +300,13 @@ function handleModelsInput(key: ModalInputKey, state: ModelsListState, context: 
   if (key.return) {
     const modelOption = modelOptions[state.selected];
     if (modelOption) {
-      const reasoningEffort = modelOption.reasoningLevels.some(level => level.value === context.session.reasoningEffort)
-        ? context.session.reasoningEffort
-        : (getDefaultReasoningLevel(modelOption)?.value ?? context.session.reasoningEffort);
+      const reasoningEffort = modelOption.reasoningLevels.some(
+        level => level.value === context.preferences.reasoningEffort,
+      )
+        ? context.preferences.reasoningEffort
+        : (getDefaultReasoningLevel(modelOption)?.value ?? context.preferences.reasoningEffort);
 
-      context.updateSettings({
+      context.updatePreferences({
         modelProvider: state.provider,
         model: modelOption.model,
         reasoningEffort,
@@ -344,7 +346,7 @@ function handleSetupInput(input: string, key: ModalInputKey, state: ModelsSetupS
       return;
     }
 
-    context.updateSettings({ provider: state.provider, apiKey });
+    context.saveProviderConfig({ provider: state.provider, apiKey });
     openNextForProvider(state.provider, context, state.auth);
     return;
   }

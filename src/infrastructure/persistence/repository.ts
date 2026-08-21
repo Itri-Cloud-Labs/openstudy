@@ -1,26 +1,18 @@
 import fs from 'fs';
 import { randomUUID } from 'crypto';
 import {
-  createDefaultAppPreferences,
+  asRecord,
   createEmptyModeResults,
+  isProvider,
+  normalizeAppPreferences,
+  normalizeStudySession,
+  nonEmptyString,
   type AppPreferences,
   type ProviderConfig,
   type StudySession,
 } from '../../domain/index.js';
 import { readJson, writeJsonAtomic } from './json.js';
-import { createPersistencePaths, isUuidDirectoryName, type PersistencePaths } from './paths.js';
-import {
-  createAppPreferencesDocument,
-  createProviderConfigDocument,
-  createStudySessionDocument,
-  getLegacyExtensions,
-  getLegacyProviderConfig,
-  isCurrentDocument,
-  readAppPreferencesValue,
-  readProviderConfigValue,
-  readStudySessionValue,
-  type AppPreferencesRecord,
-} from './schema.js';
+import { createPersistencePaths, type PersistencePaths } from './paths.js';
 
 export interface PersistenceOptions {
   rootDir: string;
@@ -28,16 +20,16 @@ export interface PersistenceOptions {
   idGenerator?: () => string;
 }
 
-export interface MigrationReport {
-  migrated: string[];
-  skipped: string[];
-  errors: Array<{ path: string; message: string }>;
-}
-
 export interface CreateStudySessionInput {
   title?: string | null;
   preferences: AppPreferences;
   modeResults?: StudySession['modeResults'];
+}
+
+export interface AppPreferencesRecord {
+  preferences: AppPreferences;
+  createdAt: string | null;
+  updatedAt: string | null;
 }
 
 export class OpenStudyPersistence {
@@ -51,31 +43,40 @@ export class OpenStudyPersistence {
     this.idGenerator = options.idGenerator ?? randomUUID;
   }
 
-  /** Reads never create directories, migrate files, or update timestamps. */
+  /** Reads never create directories or update timestamps. */
   readProviderConfig(): ProviderConfig | null {
-    const config = readJson(this.paths.providerConfig);
-    if (config.status === 'ready') {
-      const decoded = readProviderConfigValue(config.value);
-      if (decoded) return decoded;
-    }
+    const result = readJson(this.paths.providerConfig);
+    if (result.status !== 'ready') return null;
 
-    const preferences = readJson(this.paths.appPreferences);
-    return preferences.status === 'ready' ? getLegacyProviderConfig(preferences.value) : null;
+    const raw = asRecord(result.value);
+    if (Object.keys(raw).length === 0) return null;
+    return {
+      provider: isProvider(raw['provider']) ? raw['provider'] : null,
+      apiKey: typeof raw['apiKey'] === 'string' ? raw['apiKey'] : '',
+    };
   }
 
   readAppPreferences(): AppPreferencesRecord | null {
     const result = readJson(this.paths.appPreferences);
-    return result.status === 'ready' ? readAppPreferencesValue(result.value) : null;
+    if (result.status !== 'ready') return null;
+
+    const raw = asRecord(result.value);
+    if (typeof raw['preferences'] !== 'object' || raw['preferences'] === null) return null;
+
+    return {
+      preferences: normalizeAppPreferences(raw['preferences']),
+      createdAt: nonEmptyString(raw['createdAt']),
+      updatedAt: nonEmptyString(raw['updatedAt']),
+    };
   }
 
   readStudySession(sessionId: string): StudySession | null {
     const result = readJson(this.paths.sessionFile(sessionId));
-    return result.status === 'ready' ? readStudySessionValue(result.value, sessionId, new Date(0).toISOString()) : null;
-  }
+    if (result.status !== 'ready') return null;
 
-  readLegacySessionProviderConfig(sessionId: string): ProviderConfig | null {
-    const result = readJson(this.paths.sessionFile(sessionId));
-    return result.status === 'ready' ? getLegacyProviderConfig(result.value) : null;
+    const raw = asRecord(result.value);
+    if (!raw['id']) return null;
+    return normalizeStudySession(raw, sessionId, new Date(0).toISOString());
   }
 
   listStudySessions(): StudySession[] {
@@ -95,7 +96,7 @@ export class OpenStudyPersistence {
   }
 
   writeProviderConfig(config: ProviderConfig): ProviderConfig {
-    writeJsonAtomic(this.paths.providerConfig, createProviderConfigDocument(config));
+    writeJsonAtomic(this.paths.providerConfig, config);
     return { ...config };
   }
 
@@ -111,7 +112,7 @@ export class OpenStudyPersistence {
       updatedAt: metadata.updatedAt ?? now,
     };
 
-    writeJsonAtomic(this.paths.appPreferences, createAppPreferencesDocument(record, now));
+    writeJsonAtomic(this.paths.appPreferences, record);
     return record;
   }
 
@@ -121,7 +122,7 @@ export class OpenStudyPersistence {
       preferences: { ...session.preferences },
       modeResults: { ...session.modeResults },
     };
-    writeJsonAtomic(this.paths.sessionFile(session.id), createStudySessionDocument(canonical));
+    writeJsonAtomic(this.paths.sessionFile(session.id), canonical);
     return canonical;
   }
 
@@ -133,7 +134,7 @@ export class OpenStudyPersistence {
       createdAt: timestamp,
       lastOpenedAt: timestamp,
       preferences: { ...input.preferences },
-      modeResults: { ...(input.modeResults ?? createEmptyModeResults()) },
+      modeResults: input.modeResults ? { ...input.modeResults } : createEmptyModeResults(),
     };
 
     return this.writeStudySession(session);
@@ -154,139 +155,6 @@ export class OpenStudyPersistence {
     return this.listStudySessions().length === 0;
   }
 
-  /** Explicit, idempotent in-place migration. */
-  initialize(): MigrationReport {
-    const report: MigrationReport = { migrated: [], skipped: [], errors: [] };
-    fs.mkdirSync(this.paths.root, { recursive: true });
-
-    this.migrateProviderConfig(report);
-    this.migrateAppPreferences(report);
-    this.migrateStudySessions(report);
-
-    return report;
-  }
-
-  private migrateProviderConfig(report: MigrationReport): void {
-    const existing = readJson(this.paths.providerConfig);
-    if (existing.status === 'ready' && isCurrentDocument(existing.value, 'provider-config')) {
-      report.skipped.push(this.paths.providerConfig);
-      return;
-    }
-    if (existing.status === 'invalid') {
-      report.errors.push({ path: this.paths.providerConfig, message: existing.error.message });
-      return;
-    }
-
-    let source = existing.status === 'ready' ? existing.value : undefined;
-    let config = source === undefined ? null : getLegacyProviderConfig(source);
-
-    if (!config) {
-      const legacyPreferences = readJson(this.paths.appPreferences);
-      if (legacyPreferences.status === 'ready') {
-        source = legacyPreferences.value;
-        config = getLegacyProviderConfig(source);
-      }
-    }
-
-    if (!config) return;
-
-    writeJsonAtomic(this.paths.providerConfig, createProviderConfigDocument(config, getLegacyExtensions(source)));
-    report.migrated.push(this.paths.providerConfig);
-  }
-
-  private migrateAppPreferences(report: MigrationReport): void {
-    const existing = readJson(this.paths.appPreferences);
-    if (existing.status === 'missing') return;
-    if (existing.status === 'invalid') {
-      report.errors.push({ path: this.paths.appPreferences, message: existing.error.message });
-      return;
-    }
-    if (isCurrentDocument(existing.value, 'app-preferences')) {
-      report.skipped.push(this.paths.appPreferences);
-      return;
-    }
-
-    const record = readAppPreferencesValue(existing.value);
-    if (!record) {
-      report.errors.push({
-        path: this.paths.appPreferences,
-        message: 'Unrecognized app preferences schema; file was left unchanged.',
-      });
-      return;
-    }
-
-    writeJsonAtomic(
-      this.paths.appPreferences,
-      createAppPreferencesDocument(record, this.now(), getLegacyExtensions(existing.value)),
-    );
-    report.migrated.push(this.paths.appPreferences);
-  }
-
-  private migrateStudySessions(report: MigrationReport): void {
-    let entries: fs.Dirent[];
-    try {
-      entries = fs.readdirSync(this.paths.root, { withFileTypes: true });
-    } catch (error) {
-      report.errors.push({
-        path: this.paths.root,
-        message: error instanceof Error ? error.message : String(error),
-      });
-      return;
-    }
-
-    for (const entry of entries) {
-      if (!entry.isDirectory() || !isUuidDirectoryName(entry.name)) continue;
-      this.migrateStudySession(entry.name, report);
-    }
-  }
-
-  private migrateStudySession(sessionId: string, report: MigrationReport): void {
-    const pathname = this.paths.sessionFile(sessionId);
-    const existing = readJson(pathname);
-    if (existing.status === 'missing') return;
-    if (existing.status === 'invalid') {
-      report.errors.push({ path: pathname, message: existing.error.message });
-      return;
-    }
-    if (isCurrentDocument(existing.value, 'study-session')) {
-      report.skipped.push(pathname);
-      return;
-    }
-
-    const session = readStudySessionValue(existing.value, sessionId, this.now());
-    if (!session) {
-      report.errors.push({
-        path: pathname,
-        message: 'Unrecognized study session schema; file was left unchanged.',
-      });
-      return;
-    }
-
-    const legacyConfig = getLegacyProviderConfig(existing.value);
-    const centralConfig = this.readProviderConfig();
-    if (
-      legacyConfig?.apiKey &&
-      (!centralConfig ||
-        centralConfig.provider !== legacyConfig.provider ||
-        centralConfig.apiKey !== legacyConfig.apiKey)
-    ) {
-      if (!centralConfig && readJson(this.paths.providerConfig).status === 'missing') {
-        this.writeProviderConfig(legacyConfig);
-        report.migrated.push(this.paths.providerConfig);
-      } else {
-        report.errors.push({
-          path: pathname,
-          message:
-            'Session credentials differ from provider config; legacy file was left unchanged to avoid data loss.',
-        });
-        return;
-      }
-    }
-
-    writeJsonAtomic(pathname, createStudySessionDocument(session, getLegacyExtensions(existing.value)));
-    report.migrated.push(pathname);
-  }
-
   private now(): string {
     return this.clock().toISOString();
   }
@@ -294,8 +162,4 @@ export class OpenStudyPersistence {
 
 export function createPersistence(options: PersistenceOptions): OpenStudyPersistence {
   return new OpenStudyPersistence(options);
-}
-
-export function defaultPreferences(): AppPreferences {
-  return createDefaultAppPreferences();
 }

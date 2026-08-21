@@ -31,7 +31,7 @@ interface LanguageModalState {
 export function open(context: ModalContext): LanguageModalState {
   const selected = Math.max(
     0,
-    LANGUAGES.findIndex(language => language === context.session.studyLanguage),
+    LANGUAGES.findIndex(language => language === context.preferences.studyLanguage),
   );
 
   return { id: 'language', filter: '', selected };
@@ -71,7 +71,7 @@ export function render({ modal, context }: ModalRenderProps<LanguageModalState>)
           visibleLanguages.map((language, index) => {
             const languageIndex = windowStart + index;
             const isSelected = state.selected === languageIndex;
-            const isCurrent = context.session.studyLanguage === language;
+            const isCurrent = context.preferences.studyLanguage === language;
 
             return (
               <Box
@@ -133,7 +133,7 @@ function selectLanguage({ modal, context }: ModalInputProps<LanguageModalState>)
   const state = modal;
   const filteredLanguages = getFilteredLanguages(state);
   const language = filteredLanguages[state.selected];
-  if (language) context.updateSettings({ studyLanguage: language });
+  if (language) context.updatePreferences({ studyLanguage: language });
   context.closeModal();
 }
 

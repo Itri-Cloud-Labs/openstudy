@@ -1,7 +1,7 @@
 import { Box, Text } from 'ink';
 import { materialService, type MaterialEntry } from '../infrastructure/materials/index.js';
 import { truncateError } from '../shared/text.js';
-import { focusTextColor } from '../utils/index.js';
+import { focusTextColor } from '../utils/colors.js';
 import { createHandleInput, isBackspace, isCancel, isPlainTextInput, isSubmit } from './input.js';
 import type { ModalContext, ModalInputProps, ModalRenderProps } from './types.js';
 import { THEME } from '../shared/theme.js';
@@ -328,7 +328,7 @@ function selectEntry(state: Extract<FilePickerModalState, { layer: 'browser' }>,
     return;
   }
 
-  context.updateSettings({ material: entry.path });
+  context.updatePreferences({ material: { kind: 'file', path: entry.path } });
   context.closeModal();
 }
 
@@ -363,7 +363,7 @@ async function downloadUrlMaterial(state: Extract<FilePickerModalState, { layer:
 
   try {
     const target = await materialService.importUrl(state.url);
-    context.updateSettings({ material: target });
+    context.updatePreferences({ material: { kind: 'file', path: target } });
     context.closeModal();
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);

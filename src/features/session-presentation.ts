@@ -1,6 +1,7 @@
 import React from 'react';
-import type { ActiveProviderConfig, Provider } from '../domain/provider.js';
-import type { SessionSettings } from '../domain/study.js';
+import type { Provider } from '../domain/provider.js';
+import { materialRefToLegacy } from '../domain/material.js';
+import type { AppPreferences } from '../domain/study.js';
 import { getHomeDirectory, getWorkingDirectory } from '../infrastructure/runtime/environment.js';
 import type { SelectedModel } from '../modals/types.js';
 import { subjects, type SubjectOption } from '../options/index.js';
@@ -26,32 +27,33 @@ export interface SessionPresentation {
 export interface SessionSelection {
   selectedSubject: SubjectOption | null;
   selectedModel: SelectedModel | null;
-  config: ActiveProviderConfig | null;
 }
 
 export interface SessionSelectionAndPresentation extends SessionSelection {
   presentation: SessionPresentation;
 }
 
-export function useSessionSelection(session: SessionSettings): SessionSelectionAndPresentation {
+export function useSessionSelection(preferences: AppPreferences): SessionSelectionAndPresentation {
   const selectedSubject = React.useMemo<SubjectOption | null>(
     () =>
-      subjects.find(subject => subject.name === session.subject) ?? subjects.find(subject => subject.default) ?? null,
-    [session.subject],
+      subjects.find(subject => subject.name === preferences.subject) ??
+      subjects.find(subject => subject.default) ??
+      null,
+    [preferences.subject],
   );
   const selectedModel = React.useMemo<SelectedModel | null>(
-    () => (session.modelProvider && session.model ? { provider: session.modelProvider, name: session.model } : null),
-    [session.model, session.modelProvider],
-  );
-  const config = React.useMemo<ActiveProviderConfig | null>(
-    () => (session.provider ? { provider: session.provider, apiKey: session.apiKey } : null),
-    [session.apiKey, session.provider],
+    () =>
+      preferences.modelProvider && preferences.model
+        ? { provider: preferences.modelProvider, name: preferences.model }
+        : null,
+    [preferences.model, preferences.modelProvider],
   );
 
   const presentation = React.useMemo<SessionPresentation>(() => {
     const modelLabel = selectedModel
       ? `${getProviderLabel(selectedModel.provider)}/${selectedModel.name}`
       : 'Provider/Model';
+    const materialPath = materialRefToLegacy(preferences.material);
     return {
       subject: selectedSubject?.name ?? 'Subject',
       subjectColor: selectedSubject?.color ?? '#3b82f6',
@@ -59,15 +61,15 @@ export function useSessionSelection(session: SessionSettings): SessionSelectionA
       modelProvider: selectedModel?.provider ?? null,
       model: selectedModel?.name ?? 'Model',
       modelLabel,
-      reasoningEffort: session.reasoningEffort ?? 'Default',
-      material: formatMaterialLabel(session.material),
-      materialPath: session.material ?? '',
-      studyLanguage: session.studyLanguage ?? 'Study Language',
+      reasoningEffort: preferences.reasoningEffort ?? 'Default',
+      material: formatMaterialLabel(materialPath),
+      materialPath: materialPath ?? '',
+      studyLanguage: preferences.studyLanguage ?? 'Study Language',
       cwd: shortenHomePath(getWorkingDirectory(), getHomeDirectory()),
     };
-  }, [selectedModel, selectedSubject, session.material, session.reasoningEffort, session.studyLanguage]);
+  }, [selectedModel, selectedSubject, preferences]);
 
-  return { selectedSubject, selectedModel, config, presentation };
+  return { selectedSubject, selectedModel, presentation };
 }
 
 function getProviderLabel(provider: Provider): string {

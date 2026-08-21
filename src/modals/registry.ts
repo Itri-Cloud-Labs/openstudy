@@ -1,4 +1,3 @@
-import { manifest as devtools } from './devtools.manifest.js';
 import { manifest as filepicker } from './filepicker.manifest.js';
 import { manifest as language } from './language.manifest.js';
 import { manifest as message } from './message.manifest.js';
@@ -9,7 +8,6 @@ import { manifest as subjects } from './subjects.manifest.js';
 import type { ModalId, ModalManifest, ModalModule } from './types.js';
 
 export const MODAL_REGISTRY = [
-  devtools,
   filepicker,
   language,
   message,

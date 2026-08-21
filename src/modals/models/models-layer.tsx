@@ -1,6 +1,6 @@
 import { Box, Text } from 'ink';
 import { THEME } from '../../shared/theme.js';
-import { focusTextColor } from '../../utils/index.js';
+import { focusTextColor } from '../../utils/colors.js';
 import type { ModalRenderProps } from '../types.js';
 import { getProviderLabel, MODEL_MODAL_MAX_ROWS, type ModelsListState, getProviderModelOptions } from './state.js';
 

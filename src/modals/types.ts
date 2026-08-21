@@ -2,25 +2,16 @@ import type React from 'react';
 import type { useInput } from 'ink';
 import type { SubjectOption } from '../options/index.js';
 import type { ActiveProviderConfig, Provider } from '../domain/provider.js';
-import type { SessionSettings } from '../domain/study.js';
+import type { AppPreferences, StudySession } from '../domain/study.js';
 
 export interface SelectedModel {
   provider: Provider;
   name: string;
 }
 
-export type ModalId =
-  | 'devtools'
-  | 'filepicker'
-  | 'language'
-  | 'message'
-  | 'models'
-  | 'reasoning'
-  | 'sessions'
-  | 'subjects';
+export type ModalId = 'filepicker' | 'language' | 'message' | 'models' | 'reasoning' | 'sessions' | 'subjects';
 
 export interface ModalInitialStateMap {
-  devtools: undefined;
   filepicker: undefined;
   language: undefined;
   message: { title?: string; message?: string };
@@ -50,7 +41,7 @@ export interface ModalTrigger {
 }
 
 export interface ModalContext {
-  session: SessionSettings;
+  preferences: AppPreferences;
   activeSessionId: string | null;
   config: ActiveProviderConfig | null;
   selectedSubject: SubjectOption | null;
@@ -58,8 +49,9 @@ export interface ModalContext {
   openModal: OpenModal;
   closeModal: () => void;
   updateModal: <S extends ModalState>(updater: S | ((current: S) => S)) => void;
-  updateSettings: (patch: Partial<SessionSettings>) => SessionSettings;
-  setSession: (sessionId: string) => SessionSettings | null;
+  updatePreferences: (patch: Partial<AppPreferences>) => AppPreferences;
+  saveProviderConfig: (config: ActiveProviderConfig) => void;
+  setSession: (sessionId: string) => StudySession | null;
 }
 
 export interface ModalModule<S extends ModalState = ModalState> {

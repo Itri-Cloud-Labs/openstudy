@@ -1,6 +1,6 @@
 import { Box, Text } from 'ink';
 import { truncateError } from '../../shared/text.js';
-import { focusTextColor } from '../../utils/index.js';
+import { focusTextColor } from '../../utils/colors.js';
 import type { ModalRenderProps } from '../types.js';
 import { getProviderStatus, getProviderStatusColor } from './auth.js';
 import { getModelProviders, SPINNER_FRAMES, type ModelsProvidersState } from './state.js';

@@ -1,7 +1,8 @@
 import { Box, Text } from 'ink';
-import type { SessionSettings } from '../domain/study.js';
-import { focusTextColor, getAllSession } from '../utils/index.js';
-import { formatMaterialLabel, truncate } from '../shared/text.js';
+import type { StudySession } from '../domain/study.js';
+import { focusTextColor } from '../utils/colors.js';
+import { getAllSessions } from '../utils/sessions.js';
+import { formatMaterialLabel, truncate, truncateError } from '../shared/text.js';
 import { createHandleInput, isCancel, isSubmit } from './input.js';
 import type { ModalContext, ModalInputProps, ModalRenderProps } from './types.js';
 import { THEME } from '../shared/theme.js';
@@ -11,22 +12,21 @@ const SESSIONS_MODAL_MAX_ROWS = 8;
 interface SessionsModalState {
   id: 'sessions';
   selected: number;
-  sessions: SessionSettings[];
+  sessions: StudySession[];
   error?: string;
 }
 
 export function open(context: ModalContext): SessionsModalState {
-  const sessions = getStoredSessions();
-  const currentIndex = sessions.findIndex(session => session.sessionId === context.activeSessionId);
+  const sessions = getAllSessions();
+  const currentIndex = sessions.findIndex(session => session.id === context.activeSessionId);
 
   return { id: 'sessions', selected: Math.max(0, currentIndex), sessions };
 }
 
 export function getHeight(modal: SessionsModalState) {
-  const state = modal;
-  const rows = Math.max(1, Math.min(SESSIONS_MODAL_MAX_ROWS, state.sessions.length));
+  const rows = Math.max(1, Math.min(SESSIONS_MODAL_MAX_ROWS, modal.sessions.length));
 
-  return rows + (state.error ? 7 : 6);
+  return rows + (modal.error ? 7 : 6);
 }
 
 export function render({ modal, context }: ModalRenderProps<SessionsModalState>) {
@@ -56,11 +56,11 @@ export function render({ modal, context }: ModalRenderProps<SessionsModalState>)
           visibleSessions.map((session, index) => {
             const sessionIndex = windowStart + index;
             const isSelected = selected === sessionIndex;
-            const isCurrent = session.sessionId === context.activeSessionId;
+            const isCurrent = session.id === context.activeSessionId;
 
             return (
               <Box
-                key={session.sessionId ?? sessionIndex}
+                key={session.id}
                 backgroundColor={isSelected ? subjectColor : undefined}
                 justifyContent="space-between"
               >
@@ -77,7 +77,7 @@ export function render({ modal, context }: ModalRenderProps<SessionsModalState>)
       </Box>
       {state.error && (
         <Box marginBottom={1}>
-          <Text color={THEME.danger}>{state.error}</Text>
+          <Text color={THEME.danger}>{truncateError(state.error)}</Text>
         </Box>
       )}
       <Box justifyContent="space-between">
@@ -113,21 +113,16 @@ export const handleInput = createHandleInput<SessionsModalState>([
 ]);
 
 function selectSession({ modal, context }: ModalInputProps<SessionsModalState>) {
-  const state = modal;
-  const sessions = state.sessions;
-  const session = sessions[state.selected];
+  const session = modal.sessions[modal.selected];
 
-  if (!session?.sessionId) {
-    context.updateModal({
-      ...state,
-      error: sessions.length === 0 ? 'No saved sessions to open.' : 'Selected session is missing an id.',
-    });
+  if (!session) {
+    context.updateModal<SessionsModalState>({ ...modal, error: 'No saved sessions to open.' });
     return;
   }
 
-  const selectedSession = context.setSession(session.sessionId);
-  if (!selectedSession) {
-    context.updateModal({ ...state, error: 'That session could not be loaded.' });
+  const activated = context.setSession(session.id);
+  if (!activated) {
+    context.updateModal<SessionsModalState>({ ...modal, error: 'That session could not be loaded.' });
     return;
   }
 
@@ -135,43 +130,35 @@ function selectSession({ modal, context }: ModalInputProps<SessionsModalState>) 
 }
 
 function moveSelection({ modal, context }: ModalInputProps<SessionsModalState>, direction: -1 | 1) {
-  const state = modal;
-  const sessions = state.sessions;
-  if (sessions.length === 0) return;
+  if (modal.sessions.length === 0) return;
 
-  context.updateModal({
-    ...state,
-    selected: (state.selected + direction + sessions.length) % sessions.length,
+  context.updateModal<SessionsModalState>({
+    ...modal,
+    selected: (modal.selected + direction + modal.sessions.length) % modal.sessions.length,
     error: undefined,
   });
 }
 
-function getStoredSessions() {
-  return getAllSession()
-    .filter(session => Boolean(session.sessionId))
-    .sort((a, b) => {
-      const aTime = a.lastOpenedDate ?? a.createdDate ?? '';
-      const bTime = b.lastOpenedDate ?? b.createdDate ?? '';
-      return bTime.localeCompare(aTime);
-    });
-}
-
-function getSessionTitle(session: SessionSettings) {
+function getSessionTitle(session: StudySession) {
   if (session.title?.trim()) return session.title;
 
-  if (session.material) {
-    return formatMaterialLabel(session.material, 34);
-  }
+  const material = materialLabel(session);
+  if (material) return formatMaterialLabel(material, 34);
 
-  return session.sessionId ? `Session ${session.sessionId.slice(0, 8)}` : 'Untitled Session';
+  return `Session ${session.id.slice(0, 8)}`;
 }
 
-function getSessionMeta(session: SessionSettings) {
-  if (session.lastOpenedDate) return formatRelativeDate(session.lastOpenedDate);
-  if (session.createdDate) return formatRelativeDate(session.createdDate);
-  if (session.summaryText) return 'summary';
-  if (session.subject) return truncate(session.subject, 12);
+function getSessionMeta(session: StudySession) {
+  if (session.lastOpenedAt) return formatRelativeDate(session.lastOpenedAt);
+  if (session.modeResults.summary) return 'summary';
+  if (session.preferences.subject) return truncate(session.preferences.subject, 12);
   return 'draft';
+}
+
+function materialLabel(session: StudySession) {
+  const material = session.preferences.material;
+  if (!material) return null;
+  return material.kind === 'url' ? material.url : material.path;
 }
 
 function formatRelativeDate(iso: string) {

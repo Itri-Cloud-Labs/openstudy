@@ -3,7 +3,7 @@ import { materialService, type ResolvedMaterial } from '../../../../infrastructu
 import { createProvider } from '../../../../providers/index.js';
 import { truncate } from '../../../../shared/text.js';
 import type { Provider } from '../../../../domain/provider.js';
-import { getSessionById, saveSessionById } from '../../../../utils/index.js';
+import { getSessionById, saveSessionResult } from '../../../../utils/sessions.js';
 import { generateSummary } from './generate-summary.js';
 
 export interface SummaryState {
@@ -34,8 +34,8 @@ export function useSummary(options: UseSummaryOptions) {
     }
 
     const storedSession = getSessionById(sessionId);
-    if (storedSession?.summaryText) {
-      setSummaryState({ status: 'ready', response: storedSession.summaryText });
+    if (storedSession?.modeResults.summary) {
+      setSummaryState({ status: 'ready', response: storedSession.modeResults.summary });
       setTitle(storedSession.title ?? truncate(prompt, 50));
       return;
     }
@@ -76,14 +76,7 @@ export function useSummary(options: UseSummaryOptions) {
           signal: controller.signal,
         });
 
-        const current = getSessionById(sessionId);
-        if (current) {
-          saveSessionById(sessionId, {
-            ...current,
-            title: summary.SessionTitle,
-            summaryText: summary.content,
-          });
-        }
+        saveSessionResult(sessionId, { title: summary.SessionTitle, summary: summary.content });
         setTitle(truncate(summary.SessionTitle, 50));
         setSummaryState({ status: 'ready', response: summary.content });
       } catch (error) {
@@ -113,5 +106,7 @@ export function useSummary(options: UseSummaryOptions) {
 
 function initialState(sessionId: string | null): SummaryState {
   const stored = sessionId ? getSessionById(sessionId) : null;
-  return stored?.summaryText ? { status: 'ready', response: stored.summaryText } : { status: 'loading', response: '' };
+  return stored?.modeResults.summary
+    ? { status: 'ready', response: stored.modeResults.summary }
+    : { status: 'loading', response: '' };
 }

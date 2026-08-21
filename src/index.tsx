@@ -2,7 +2,7 @@
 import { render } from 'ink';
 import { App } from './app/App.js';
 import { closeProviders } from './providers/index.js';
-import { initializePersistence, isFirstLaunch } from './utils/config.js';
+import { isFirstLaunch } from './utils/config.js';
 
 const ANSI_ENABLE_MOUSE_POINTER = '\x1b[?1000h\x1b[?1006h';
 const ANSI_DISABLE_MOUSE_POINTER = '\x1b[?1000l\x1b[?1002l\x1b[?1003l\x1b[?1005l\x1b[?1006l\x1b[?1015l\x1b[?1007l';
@@ -62,7 +62,6 @@ function registerProcessHandlers(): void {
 }
 
 const firstLaunch = isFirstLaunch();
-initializePersistence();
 restoreMousePointer();
 registerProcessHandlers();
 

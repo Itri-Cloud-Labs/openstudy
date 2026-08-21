@@ -2,7 +2,8 @@ import React from 'react';
 import { Box, Text, useInput } from 'ink';
 import { loadCommands, type CommandContext, type CommandModule } from '../commands/index.js';
 import type { ActiveProviderConfig, Provider } from '../domain/provider.js';
-import type { SessionSettings } from '../domain/study.js';
+import { materialRefToLegacy } from '../domain/material.js';
+import type { AppPreferences, StudySession } from '../domain/study.js';
 import { useSessionSelection } from '../features/session-presentation.js';
 import { HomeScreen } from '../features/home/HomeScreen.js';
 import { SetupScreen } from '../features/setup/SetupScreen.js';
@@ -17,8 +18,8 @@ import { formatMaterialLabel } from '../shared/text.js';
 import { THEME } from '../shared/theme.js';
 import { useTerminalSurface } from '../shared/terminal/useTerminalSurface.js';
 import { LoadingScreen } from '../shared/ui/LoadingScreen.js';
-import { loadSession, updateSettings } from '../utils/config.js';
-import { createSession, setSession as setSavedSession } from '../utils/index.js';
+import { loadAppPreferences, loadConfig, saveConfig, updatePreferences } from '../utils/config.js';
+import { activateSession as activateSavedSession, createSession } from '../utils/sessions.js';
 import { isTerminalMouseReport } from '../utils/input.js';
 
 const MIN_LOADING_MS = 350;
@@ -108,28 +109,33 @@ interface StudyWorkspaceProps {
 function StudyWorkspace({ route, commands, inputDisabled, onExit, onRouteChange }: StudyWorkspaceProps) {
   useTerminalSurface();
   const terminal = useTerminalSize();
-  const [session, setSession] = React.useState<SessionSettings>(() => loadSession());
+  const [preferences, setPreferences] = React.useState<AppPreferences>(() => loadAppPreferences());
+  const [config, setConfig] = React.useState<ActiveProviderConfig | null>(() => loadConfig());
   const activeSessionId = route.screen === 'session' ? route.sessionId : null;
   const modalScreen: ModalScreen = route.screen === 'session' ? 'session' : 'home';
-  const { selectedSubject, selectedModel, config, presentation } = useSessionSelection(session);
+  const { selectedSubject, selectedModel, presentation } = useSessionSelection(preferences);
 
-  const updateSession = React.useCallback((patch: Partial<SessionSettings>) => {
-    const next = updateSettings(patch);
-    setSession(next);
+  const handleUpdatePreferences = React.useCallback((patch: Partial<AppPreferences>) => {
+    const next = updatePreferences(patch);
+    setPreferences(next);
     return next;
+  }, []);
+
+  const handleSaveProviderConfig = React.useCallback((next: ActiveProviderConfig) => {
+    saveConfig(next);
+    setConfig(next);
   }, []);
 
   const activateSession = React.useCallback(
     (sessionId: string) => {
-      const next = setSavedSession(sessionId);
-      if (!next) return null;
-      setSession(next);
+      const activated = activateSavedSession(sessionId);
+      if (!activated) return null;
       onRouteChange({
         screen: 'session',
-        sessionId: next.sessionId ?? sessionId,
-        prompt: getSessionPromptTitle(next),
+        sessionId,
+        prompt: getSessionPromptTitle(activated),
       });
-      return next;
+      return activated;
     },
     [onRouteChange],
   );
@@ -145,12 +151,13 @@ function StudyWorkspace({ route, commands, inputDisabled, onExit, onRouteChange 
 
   const modalManager = useModalManager({
     screen: modalScreen,
-    session,
+    preferences,
     activeSessionId,
     config,
     selectedSubject,
     selectedModel,
-    updateSettings: updateSession,
+    updatePreferences: handleUpdatePreferences,
+    saveProviderConfig: handleSaveProviderConfig,
     setSession: activateSession,
     isProviderConfigured,
   });
@@ -188,12 +195,11 @@ function StudyWorkspace({ route, commands, inputDisabled, onExit, onRouteChange 
 
   const handleHomeSubmit = React.useCallback(
     (value: string) => {
-      if (!hasCompleteSessionOptions(session, selectedSubject, selectedModel)) return;
-      const created = createSession({ ...session, title: null, summaryText: null });
-      if (!created.sessionId) return;
-      onRouteChange({ screen: 'session', sessionId: created.sessionId, prompt: value.trim() });
+      if (!hasCompleteSessionOptions(preferences, selectedSubject, selectedModel)) return;
+      const created = createSession(preferences);
+      onRouteChange({ screen: 'session', sessionId: created.id, prompt: value.trim() });
     },
-    [onRouteChange, selectedModel, selectedSubject, session],
+    [onRouteChange, selectedModel, selectedSubject, preferences],
   );
 
   if (terminal.width < MIN_WIDTH || terminal.height < MIN_HEIGHT) {
@@ -267,16 +273,16 @@ function TerminalTooSmall({ width, height }: { width: number; height: number }) 
 }
 
 function hasCompleteSessionOptions(
-  session: SessionSettings,
+  preferences: AppPreferences,
   selectedSubject: SubjectOption | null,
   selectedModel: SelectedModel | null,
 ): boolean {
   return Boolean(
     selectedSubject &&
       selectedModel &&
-      (!modelRequiresReasoning(selectedModel) || session.reasoningEffort) &&
-      session.material &&
-      session.studyLanguage,
+      (!modelRequiresReasoning(selectedModel) || preferences.reasoningEffort) &&
+      preferences.material &&
+      preferences.studyLanguage,
   );
 }
 
@@ -286,9 +292,9 @@ function modelRequiresReasoning(selectedModel: SelectedModel): boolean {
   return Boolean(option && option.reasoningLevels.length > 0);
 }
 
-function getSessionPromptTitle(session: SessionSettings): string {
+function getSessionPromptTitle(session: StudySession): string {
   const title = session.title?.trim();
   if (title) return title;
-  const material = formatMaterialLabel(session.material);
+  const material = formatMaterialLabel(materialRefToLegacy(session.preferences.material));
   return material === 'Material' ? 'Study Session' : material;
 }

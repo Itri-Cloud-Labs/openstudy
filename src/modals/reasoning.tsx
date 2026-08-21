@@ -1,6 +1,6 @@
 import { Box, Text } from 'ink';
 import { createProvider, type ProviderReasoningLevel } from '../providers/index.js';
-import { focusTextColor } from '../utils/index.js';
+import { focusTextColor } from '../utils/colors.js';
 import { createHandleInput, isCancel, isSubmit } from './input.js';
 import type { ModalContext, ModalInputProps, ModalRenderProps } from './types.js';
 import { THEME } from '../shared/theme.js';
@@ -31,7 +31,7 @@ export function open(context: ModalContext): ReasoningModalState {
 
   const selected = Math.max(
     0,
-    modelOption.reasoningLevels.findIndex(level => level.value === context.session.reasoningEffort),
+    modelOption.reasoningLevels.findIndex(level => level.value === context.preferences.reasoningEffort),
   );
 
   return {
@@ -91,7 +91,7 @@ export function render({ modal, context }: ModalRenderProps<ReasoningModalState>
         {visibleLevels.map((level, index) => {
           const levelIndex = windowStart + index;
           const isSelected = state.selected === levelIndex;
-          const isCurrent = context.session.reasoningEffort === level.value;
+          const isCurrent = context.preferences.reasoningEffort === level.value;
 
           return (
             <Box key={level.id} backgroundColor={isSelected ? subjectColor : undefined} justifyContent="space-between">
@@ -140,7 +140,7 @@ function selectReasoningLevel({ modal, context }: ModalInputProps<ReasoningModal
   }
 
   const level = state.levels[state.selected];
-  if (level) context.updateSettings({ reasoningEffort: level.value });
+  if (level) context.updatePreferences({ reasoningEffort: level.value });
   context.closeModal();
 }
 

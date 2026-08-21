@@ -14,17 +14,18 @@ import type {
 } from '../../modals/types.js';
 import type { SubjectOption } from '../../options/index.js';
 import type { ActiveProviderConfig, Provider } from '../../domain/provider.js';
-import type { SessionSettings } from '../../domain/study.js';
+import type { AppPreferences, StudySession } from '../../domain/study.js';
 
 export interface ModalManagerOptions {
   screen: ModalScreen;
-  session: SessionSettings;
+  preferences: AppPreferences;
   activeSessionId: string | null;
   config: ActiveProviderConfig | null;
   selectedSubject: SubjectOption | null;
   selectedModel: SelectedModel | null;
-  updateSettings: (patch: Partial<SessionSettings>) => SessionSettings;
-  setSession: (sessionId: string) => SessionSettings | null;
+  updatePreferences: (patch: Partial<AppPreferences>) => AppPreferences;
+  saveProviderConfig: (config: ActiveProviderConfig) => void;
+  setSession: (sessionId: string) => StudySession | null;
   isProviderConfigured: (provider: Provider) => boolean;
 }
 
@@ -69,7 +70,7 @@ export function useModalManager(options: ModalManagerOptions): ModalManager {
 
   const context = React.useMemo<ModalRenderContext>(
     () => ({
-      session: options.session,
+      preferences: options.preferences,
       activeSessionId: options.activeSessionId,
       config: options.config,
       selectedSubject: options.selectedSubject,
@@ -77,7 +78,8 @@ export function useModalManager(options: ModalManagerOptions): ModalManager {
       openModal: open,
       closeModal: close,
       updateModal: update,
-      updateSettings: options.updateSettings,
+      updatePreferences: options.updatePreferences,
+      saveProviderConfig: options.saveProviderConfig,
       setSession: options.setSession,
       isProviderConfigured: options.isProviderConfigured,
     }),
@@ -89,9 +91,10 @@ export function useModalManager(options: ModalManagerOptions): ModalManager {
       options.isProviderConfigured,
       options.selectedModel,
       options.selectedSubject,
-      options.session,
+      options.preferences,
       options.setSession,
-      options.updateSettings,
+      options.updatePreferences,
+      options.saveProviderConfig,
       update,
     ],
   );
