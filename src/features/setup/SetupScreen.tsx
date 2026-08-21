@@ -3,8 +3,8 @@ import { Box, Text, useInput } from 'ink';
 import { ProviderSelector } from './ProviderSelector.js';
 import { ApiKeyInput } from './ApiKeyInput.js';
 import { saveConfig, CONFIG_FILE } from '../../utils/config.js';
-import { PROVIDERS } from '../../types/index.js';
-import type { Provider } from '../../types/index.js';
+import type { Provider } from '../../domain/provider.js';
+import { PROVIDER_METADATA } from '../../providers/index.js';
 
 type Step = 'welcome' | 'provider' | 'apikey' | 'saving' | 'done';
 
@@ -73,7 +73,7 @@ interface DoneStepProps {
 }
 
 const DoneStep: React.FC<DoneStepProps> = ({ provider, onExit }) => {
-  const label = PROVIDERS.find(p => p.id === provider)?.label ?? provider;
+  const label = PROVIDER_METADATA.find(p => p.id === provider)?.label ?? provider;
 
   useInput((_ch, key) => {
     if (_ch === 'q' || key.escape || (key.ctrl && _ch === 'c')) {
@@ -109,11 +109,11 @@ export const SetupScreen: React.FC<SetupScreenProps> = ({ onExit }) => {
   const [provider, setProvider] = React.useState<Provider | null>(null);
   const [apiKey, setApiKey] = React.useState('');
 
-  const providerMeta = provider ? PROVIDERS.find(p => p.id === provider) : null;
+  const providerMeta = provider ? PROVIDER_METADATA.find(p => p.id === provider) : null;
 
   const handleProviderSelect = (selected: Provider) => {
     setProvider(selected);
-    const meta = PROVIDERS.find(p => p.id === selected);
+    const meta = PROVIDER_METADATA.find(p => p.id === selected);
     setStep(meta?.requiresKey ? 'apikey' : 'saving');
   };
 

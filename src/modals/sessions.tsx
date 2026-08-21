@@ -1,35 +1,36 @@
 import { Box, Text } from 'ink';
-import type { SessionSettings } from '../types/index.js';
-import { focusTextColor, getAllSession } from '../utils/index.js';
-import { formatMaterialLabel, truncate } from '../shared/text.js';
+import type { StudySession } from '../domain/study.js';
+import { focusTextColor } from '../utils/colors.js';
+import { getAllSessions } from '../utils/sessions.js';
+import { formatMaterialLabel, truncate, truncateError } from '../shared/text.js';
 import { createHandleInput, isCancel, isSubmit } from './input.js';
-import type { ModalContext, ModalInputProps, ModalRenderProps, ModalState } from './types.js';
+import type { ModalContext, ModalInputProps, ModalRenderProps } from './types.js';
+import { THEME } from '../shared/theme.js';
 
 const SESSIONS_MODAL_MAX_ROWS = 8;
 
-interface SessionsModalState extends ModalState {
+interface SessionsModalState {
   id: 'sessions';
   selected: number;
-  sessions: SessionSettings[];
+  sessions: StudySession[];
   error?: string;
 }
 
-export function open(context: ModalContext): ModalState {
-  const sessions = getStoredSessions();
-  const currentIndex = sessions.findIndex(session => session.sessionId === context.activeSessionId);
+export function open(context: ModalContext): SessionsModalState {
+  const sessions = getAllSessions();
+  const currentIndex = sessions.findIndex(session => session.id === context.activeSessionId);
 
   return { id: 'sessions', selected: Math.max(0, currentIndex), sessions };
 }
 
-export function getHeight(modal: ModalState) {
-  const state = modal as SessionsModalState;
-  const rows = Math.max(1, Math.min(SESSIONS_MODAL_MAX_ROWS, state.sessions.length));
+export function getHeight(modal: SessionsModalState) {
+  const rows = Math.max(1, Math.min(SESSIONS_MODAL_MAX_ROWS, modal.sessions.length));
 
-  return rows + (state.error ? 7 : 6);
+  return rows + (modal.error ? 7 : 6);
 }
 
-export function render({ modal, context }: ModalRenderProps) {
-  const state = modal as SessionsModalState;
+export function render({ modal, context }: ModalRenderProps<SessionsModalState>) {
+  const state = modal;
   const subjectColor = context.selectedSubject?.color ?? '#3b82f6';
   const sessions = state.sessions;
   const rows = Math.max(1, Math.min(SESSIONS_MODAL_MAX_ROWS, sessions.length));
@@ -40,33 +41,33 @@ export function render({ modal, context }: ModalRenderProps) {
   return (
     <>
       <Box justifyContent="space-between" marginBottom={1}>
-        <Text color="#f0f0f0" bold>
+        <Text color={THEME.text} bold>
           Saved Sessions
         </Text>
-        <Text color="#777777">esc</Text>
+        <Text color={THEME.textMuted}>esc</Text>
       </Box>
       <Box marginBottom={1}>
-        <Text color="#777777">Choose a session to resume.</Text>
+        <Text color={THEME.textMuted}>Choose a session to resume.</Text>
       </Box>
       <Box flexDirection="column" marginBottom={1}>
         {sessions.length === 0 ? (
-          <Text color="#777777">No saved sessions yet</Text>
+          <Text color={THEME.textMuted}>No saved sessions yet</Text>
         ) : (
           visibleSessions.map((session, index) => {
             const sessionIndex = windowStart + index;
             const isSelected = selected === sessionIndex;
-            const isCurrent = session.sessionId === context.activeSessionId;
+            const isCurrent = session.id === context.activeSessionId;
 
             return (
               <Box
-                key={session.sessionId ?? sessionIndex}
+                key={session.id}
                 backgroundColor={isSelected ? subjectColor : undefined}
                 justifyContent="space-between"
               >
-                <Text color={isSelected ? '#000000' : '#f0f0f0'} bold={isSelected}>
+                <Text color={isSelected ? THEME.onAccent : THEME.text} bold={isSelected}>
                   {truncate(getSessionTitle(session), 34)}
                 </Text>
-                <Text color={focusTextColor(isCurrent ? '#22c55e' : '#777777', subjectColor, isSelected)}>
+                <Text color={focusTextColor(isCurrent ? THEME.success : THEME.textMuted, subjectColor, isSelected)}>
                   {isCurrent ? 'current' : getSessionMeta(session)}
                 </Text>
               </Box>
@@ -76,23 +77,23 @@ export function render({ modal, context }: ModalRenderProps) {
       </Box>
       {state.error && (
         <Box marginBottom={1}>
-          <Text color="#ef4444">{state.error}</Text>
+          <Text color={THEME.danger}>{truncateError(state.error)}</Text>
         </Box>
       )}
       <Box justifyContent="space-between">
-        <Text color="#777777">
+        <Text color={THEME.textMuted}>
           up/down{' '}
           {sessions.length === 0
             ? '0-0/0'
             : `${windowStart + 1}-${windowStart + visibleSessions.length}/${sessions.length}`}
         </Text>
-        <Text color="#777777">enter open</Text>
+        <Text color={THEME.textMuted}>enter open</Text>
       </Box>
     </>
   );
 }
 
-export const handleInput = createHandleInput([
+export const handleInput = createHandleInput<SessionsModalState>([
   {
     when: isCancel,
     run: ({ context }) => context.closeModal(),
@@ -111,66 +112,53 @@ export const handleInput = createHandleInput([
   },
 ]);
 
-function selectSession({ modal, context }: ModalInputProps) {
-  const state = modal as SessionsModalState;
-  const sessions = state.sessions;
-  const session = sessions[state.selected];
+function selectSession({ modal, context }: ModalInputProps<SessionsModalState>) {
+  const session = modal.sessions[modal.selected];
 
-  if (!session?.sessionId) {
-    context.updateModal({
-      ...state,
-      error: sessions.length === 0 ? 'No saved sessions to open.' : 'Selected session is missing an id.',
-    });
+  if (!session) {
+    context.updateModal<SessionsModalState>({ ...modal, error: 'No saved sessions to open.' });
     return;
   }
 
-  const selectedSession = context.setSession(session.sessionId);
-  if (!selectedSession) {
-    context.updateModal({ ...state, error: 'That session could not be loaded.' });
+  const activated = context.setSession(session.id);
+  if (!activated) {
+    context.updateModal<SessionsModalState>({ ...modal, error: 'That session could not be loaded.' });
     return;
   }
 
   context.closeModal();
 }
 
-function moveSelection({ modal, context }: ModalInputProps, direction: -1 | 1) {
-  const state = modal as SessionsModalState;
-  const sessions = state.sessions;
-  if (sessions.length === 0) return;
+function moveSelection({ modal, context }: ModalInputProps<SessionsModalState>, direction: -1 | 1) {
+  if (modal.sessions.length === 0) return;
 
-  context.updateModal({
-    ...state,
-    selected: (state.selected + direction + sessions.length) % sessions.length,
+  context.updateModal<SessionsModalState>({
+    ...modal,
+    selected: (modal.selected + direction + modal.sessions.length) % modal.sessions.length,
     error: undefined,
   });
 }
 
-function getStoredSessions() {
-  return getAllSession()
-    .filter(session => Boolean(session.sessionId))
-    .sort((a, b) => {
-      const aTime = a.lastOpenedDate ?? a.createdDate ?? '';
-      const bTime = b.lastOpenedDate ?? b.createdDate ?? '';
-      return bTime.localeCompare(aTime);
-    });
-}
-
-function getSessionTitle(session: SessionSettings) {
+function getSessionTitle(session: StudySession) {
   if (session.title?.trim()) return session.title;
 
-  if (session.material) {
-    return formatMaterialLabel(session.material, 34);
-  }
+  const material = materialLabel(session);
+  if (material) return formatMaterialLabel(material, 34);
 
-  return session.sessionId ? `Session ${session.sessionId.slice(0, 8)}` : 'Untitled Session';
+  return `Session ${session.id.slice(0, 8)}`;
 }
 
-function getSessionMeta(session: SessionSettings) {
-  if (session.lastOpenedDate) return formatRelativeDate(session.lastOpenedDate);
-  if (session.createdDate) return formatRelativeDate(session.createdDate);
-  if (session.summaryText) return 'summary';
-  if (session.subject) return truncate(session.subject, 12);
+function getSessionMeta(session: StudySession) {
+  if (session.lastOpenedAt) return formatRelativeDate(session.lastOpenedAt);
+  if (session.modeResults.summary) return 'summary';
+  if (session.preferences.subject) return truncate(session.preferences.subject, 12);
   return 'draft';
+}
+
+function materialLabel(session: StudySession) {
+  const material = session.preferences.material;
+  if (!material) return null;
+  return material.kind === 'url' ? material.url : material.path;
 }
 
 function formatRelativeDate(iso: string) {

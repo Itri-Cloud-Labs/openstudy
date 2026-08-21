@@ -5,7 +5,6 @@ export const SHORTCUTS = {
   material: { key: 'ctrl+f', input: 'f', ctrl: true, label: 'material' },
   language: { key: 'ctrl+l', input: 'l', ctrl: true, label: 'language' },
   nextMode: { key: 'ctrl+l', input: 'l', ctrl: true, label: 'next mode' },
-  devtools: { key: 'ctrl+d', input: 'd', ctrl: true, label: 'dev tools' },
   close: { key: 'ctrl+c', input: 'c', ctrl: true, label: 'close' },
 } as const;
 

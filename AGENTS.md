@@ -66,7 +66,7 @@ The intended experience is local-first, keyboard-driven, calm, and focused. User
 - `src/components/SetupScreen.tsx`: first-run/setup flow for provider configuration.
 - `src/modals`: modal modules and manifests. Each modal should have a manifest when it is user-triggerable.
 - `src/commands`: slash command modules loaded dynamically by `loadCommands`.
-- `src/providers`: provider implementations and provider definitions.
+- `src/providers`: the single `StudyProvider` contract (`checkAuth`, `getModels`, `prompt`, `dispose`), one adapter per backend, provider metadata, and the factory map. Prompts resolve once with final text; do not reintroduce streaming events or status callbacks.
 - `src/prompts`: study-mode system prompts. Each file should export a plain string prompt for one mode; keep schemas and runtime prompt-building logic elsewhere.
 - `src/options`: static options such as study subjects.
 - `src/utils/config.ts`: local config/session persistence under `~/.openstudy`.
@@ -118,7 +118,7 @@ The intended experience is local-first, keyboard-driven, calm, and focused. User
 - Keep provider additions behind provider definitions in `src/providers` and compatible session/config types.
 - Keep study-mode system prompts in `src/prompts` as TypeScript string exports only. Do not put response schemas, provider calls, or UI logic in prompt files.
 - Keep response schemas outside `src/prompts`; provider options may pass schemas separately when needed.
-- The Codex provider supports `file`, `files`, and `responseSchema` prompt options. File options currently map to Codex SDK local image inputs, and `responseSchema` maps to `outputSchema`.
+- The Codex provider supports `file`, `files`, and `responseSchema` prompt options. File options are appended to the prompt as material references the model reads from disk, and `responseSchema` maps to the AI SDK's structured `output`.
 - Input handlers should ignore terminal mouse reports with `isTerminalMouseReport` before interpreting keys.
 - `src/index.tsx` enables terminal mouse reporting to keep pointer behavior stable in alternate-screen mode and restores it on exit.
 - Do not introduce API keys, secrets, or local user config into the repository.

@@ -13,17 +13,19 @@ import type {
   SelectedModel,
 } from '../../modals/types.js';
 import type { SubjectOption } from '../../options/index.js';
-import type { Config, Provider, SessionSettings } from '../../types/index.js';
+import type { ActiveProviderConfig, Provider } from '../../domain/provider.js';
+import type { AppPreferences, StudySession } from '../../domain/study.js';
 
 export interface ModalManagerOptions {
   screen: ModalScreen;
-  session: SessionSettings;
+  preferences: AppPreferences;
   activeSessionId: string | null;
-  config: Config | null;
+  config: ActiveProviderConfig | null;
   selectedSubject: SubjectOption | null;
   selectedModel: SelectedModel | null;
-  updateSettings: (patch: Partial<SessionSettings>) => SessionSettings;
-  setSession: (sessionId: string) => SessionSettings | null;
+  updatePreferences: (patch: Partial<AppPreferences>) => AppPreferences;
+  saveProviderConfig: (config: ActiveProviderConfig) => void;
+  setSession: (sessionId: string) => StudySession | null;
   isProviderConfigured: (provider: Provider) => boolean;
 }
 
@@ -42,10 +44,13 @@ export function useModalManager(options: ModalManagerOptions): ModalManager {
   const contextRef = React.useRef<ModalRenderContext | null>(null);
 
   const close = React.useCallback(() => setModal(null), []);
-  const update = React.useCallback((updater: ModalState | ((current: ModalState) => ModalState)) => {
+  const update = React.useCallback(<S extends ModalState>(updater: S | ((current: S) => S)) => {
     setModal(current => {
       if (!current) return current;
-      const state = typeof updater === 'function' ? updater(current.state) : updater;
+      // The manager stores the open modal erased to its base state; callers
+      // narrow via the generic parameter.
+      const state =
+        typeof updater === 'function' ? (updater as (current: never) => ModalState)(current.state as never) : updater;
       return { ...current, state };
     });
   }, []);
@@ -65,7 +70,7 @@ export function useModalManager(options: ModalManagerOptions): ModalManager {
 
   const context = React.useMemo<ModalRenderContext>(
     () => ({
-      session: options.session,
+      preferences: options.preferences,
       activeSessionId: options.activeSessionId,
       config: options.config,
       selectedSubject: options.selectedSubject,
@@ -73,13 +78,30 @@ export function useModalManager(options: ModalManagerOptions): ModalManager {
       openModal: open,
       closeModal: close,
       updateModal: update,
-      updateSettings: options.updateSettings,
+      updatePreferences: options.updatePreferences,
+      saveProviderConfig: options.saveProviderConfig,
       setSession: options.setSession,
       isProviderConfigured: options.isProviderConfigured,
     }),
-    [close, open, options, update],
+    [
+      close,
+      open,
+      options.activeSessionId,
+      options.config,
+      options.isProviderConfigured,
+      options.selectedModel,
+      options.selectedSubject,
+      options.preferences,
+      options.setSession,
+      options.updatePreferences,
+      options.saveProviderConfig,
+      update,
+    ],
   );
-  contextRef.current = context;
+
+  React.useEffect(() => {
+    contextRef.current = context;
+  }, [context]);
 
   const triggers = React.useMemo(
     () =>

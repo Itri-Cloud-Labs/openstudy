@@ -21,3 +21,8 @@ export function formatMaterialLabel(material: string | null, maxLength = 50): st
 export function shortenHomePath(value: string, homeDirectory: string): string {
   return value.startsWith(homeDirectory) ? `~${value.slice(homeDirectory.length)}` : value;
 }
+
+export function truncateError(message: string, maxLength = 54): string {
+  const normalized = message.replace(/\s+/g, ' ').trim();
+  return truncate(normalized, maxLength, '…');
+}

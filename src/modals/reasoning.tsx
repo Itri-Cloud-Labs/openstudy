@@ -1,8 +1,9 @@
 import { Box, Text } from 'ink';
 import { createProvider, type ProviderReasoningLevel } from '../providers/index.js';
-import { focusTextColor } from '../utils/index.js';
+import { focusTextColor } from '../utils/colors.js';
 import { createHandleInput, isCancel, isSubmit } from './input.js';
-import type { ModalContext, ModalInputProps, ModalRenderProps, ModalState } from './types.js';
+import type { ModalContext, ModalInputProps, ModalRenderProps } from './types.js';
+import { THEME } from '../shared/theme.js';
 
 const REASONING_MODAL_MAX_ROWS = 6;
 
@@ -10,7 +11,7 @@ type ReasoningModalState =
   | { id: 'reasoning'; selected: number; levels: ProviderReasoningLevel[]; model: string; providerLabel: string }
   | { id: 'reasoning'; selected: number; levels: []; error: string };
 
-export function open(context: ModalContext): ModalState {
+export function open(context: ModalContext): ReasoningModalState {
   const selectedModel = context.selectedModel;
 
   if (!selectedModel) {
@@ -18,7 +19,7 @@ export function open(context: ModalContext): ModalState {
   }
 
   const provider = createProvider(selectedModel.provider);
-  const modelOption = provider?.GetModels().find(option => option.model === selectedModel.name) ?? null;
+  const modelOption = provider?.getModels().find(option => option.model === selectedModel.name) ?? null;
 
   if (!provider || !modelOption) {
     return { id: 'reasoning', selected: 0, levels: [], error: 'Selected model is unavailable.' };
@@ -30,7 +31,7 @@ export function open(context: ModalContext): ModalState {
 
   const selected = Math.max(
     0,
-    modelOption.reasoningLevels.findIndex(level => level.value === context.session.reasoningEffort),
+    modelOption.reasoningLevels.findIndex(level => level.value === context.preferences.reasoningEffort),
   );
 
   return {
@@ -42,29 +43,29 @@ export function open(context: ModalContext): ModalState {
   };
 }
 
-export function getHeight(modal: ModalState) {
-  const state = modal as ReasoningModalState;
+export function getHeight(modal: ReasoningModalState) {
+  const state = modal;
   const rows = Math.max(1, Math.min(REASONING_MODAL_MAX_ROWS, state.levels.length));
   return rows + 7;
 }
 
-export function render({ modal, context }: ModalRenderProps) {
-  const state = modal as ReasoningModalState;
+export function render({ modal, context }: ModalRenderProps<ReasoningModalState>) {
+  const state = modal;
 
   if ('error' in state) {
     return (
       <>
         <Box justifyContent="space-between" marginBottom={1}>
-          <Text color="#f0f0f0" bold>
+          <Text color={THEME.text} bold>
             Select Reasoning
           </Text>
-          <Text color="#777777">esc</Text>
+          <Text color={THEME.textMuted}>esc</Text>
         </Box>
         <Box marginBottom={1}>
-          <Text color="#ef4444">{state.error}</Text>
+          <Text color={THEME.danger}>{state.error}</Text>
         </Box>
         <Box justifyContent="flex-end">
-          <Text color="#777777">enter close</Text>
+          <Text color={THEME.textMuted}>enter close</Text>
         </Box>
       </>
     );
@@ -78,41 +79,41 @@ export function render({ modal, context }: ModalRenderProps) {
   return (
     <>
       <Box justifyContent="space-between" marginBottom={1}>
-        <Text color="#f0f0f0" bold>
+        <Text color={THEME.text} bold>
           {state.providerLabel}/{state.model}
         </Text>
-        <Text color="#777777">esc</Text>
+        <Text color={THEME.textMuted}>esc</Text>
       </Box>
       <Box marginBottom={1}>
-        <Text color="#777777">Select a reasoning level.</Text>
+        <Text color={THEME.textMuted}>Select a reasoning level.</Text>
       </Box>
       <Box flexDirection="column" marginBottom={1}>
         {visibleLevels.map((level, index) => {
           const levelIndex = windowStart + index;
           const isSelected = state.selected === levelIndex;
-          const isCurrent = context.session.reasoningEffort === level.value;
+          const isCurrent = context.preferences.reasoningEffort === level.value;
 
           return (
             <Box key={level.id} backgroundColor={isSelected ? subjectColor : undefined} justifyContent="space-between">
-              <Text color={isSelected ? '#000000' : '#f0f0f0'} bold={isSelected}>
+              <Text color={isSelected ? THEME.onAccent : THEME.text} bold={isSelected}>
                 {level.label}
               </Text>
-              {isCurrent && <Text color={focusTextColor('#22c55e', subjectColor, isSelected)}>current</Text>}
+              {isCurrent && <Text color={focusTextColor(THEME.success, subjectColor, isSelected)}>current</Text>}
             </Box>
           );
         })}
       </Box>
       <Box justifyContent="space-between">
-        <Text color="#777777">
+        <Text color={THEME.textMuted}>
           ↑↓ move {windowStart + 1}-{windowStart + visibleLevels.length}/{state.levels.length}
         </Text>
-        <Text color="#777777">enter select</Text>
+        <Text color={THEME.textMuted}>enter select</Text>
       </Box>
     </>
   );
 }
 
-export const handleInput = createHandleInput([
+export const handleInput = createHandleInput<ReasoningModalState>([
   {
     when: isCancel,
     run: ({ context }) => context.closeModal(),
@@ -131,20 +132,20 @@ export const handleInput = createHandleInput([
   },
 ]);
 
-function selectReasoningLevel({ modal, context }: ModalInputProps) {
-  const state = modal as ReasoningModalState;
+function selectReasoningLevel({ modal, context }: ModalInputProps<ReasoningModalState>) {
+  const state = modal;
   if ('error' in state) {
     context.closeModal();
     return;
   }
 
   const level = state.levels[state.selected];
-  if (level) context.updateSettings({ reasoningEffort: level.value });
+  if (level) context.updatePreferences({ reasoningEffort: level.value });
   context.closeModal();
 }
 
-function moveSelection({ modal, context }: ModalInputProps, direction: -1 | 1) {
-  const state = modal as ReasoningModalState;
+function moveSelection({ modal, context }: ModalInputProps<ReasoningModalState>, direction: -1 | 1) {
+  const state = modal;
   if ('error' in state || state.levels.length === 0) return;
 
   context.updateModal({ ...state, selected: (state.selected + direction + state.levels.length) % state.levels.length });

@@ -1,6 +1,7 @@
 import { Box, Text } from 'ink';
 import { createHandleInput, isBackspace, isCancel, isPlainTextInput, isSubmit } from './input.js';
-import type { ModalContext, ModalInputProps, ModalRenderProps, ModalState } from './types.js';
+import type { ModalContext, ModalInputProps, ModalRenderProps } from './types.js';
+import { THEME } from '../shared/theme.js';
 
 const LANGUAGE_MODAL_MAX_ROWS = 8;
 
@@ -21,29 +22,29 @@ const LANGUAGES = [
   'Turkish',
 ];
 
-interface LanguageModalState extends ModalState {
+interface LanguageModalState {
   id: 'language';
   filter: string;
   selected: number;
 }
 
-export function open(context: ModalContext): ModalState {
+export function open(context: ModalContext): LanguageModalState {
   const selected = Math.max(
     0,
-    LANGUAGES.findIndex(language => language === context.session.studyLanguage),
+    LANGUAGES.findIndex(language => language === context.preferences.studyLanguage),
   );
 
   return { id: 'language', filter: '', selected };
 }
 
-export function getHeight(modal: ModalState) {
-  const filteredLanguages = getFilteredLanguages(modal as LanguageModalState);
+export function getHeight(modal: LanguageModalState) {
+  const filteredLanguages = getFilteredLanguages(modal);
   const rows = Math.max(1, Math.min(LANGUAGE_MODAL_MAX_ROWS, filteredLanguages.length));
   return rows + 7;
 }
 
-export function render({ modal, context }: ModalRenderProps) {
-  const state = modal as LanguageModalState;
+export function render({ modal, context }: ModalRenderProps<LanguageModalState>) {
+  const state = modal;
   const subjectColor = context.selectedSubject?.color ?? '#3b82f6';
   const filteredLanguages = getFilteredLanguages(state);
   const rows = Math.max(1, Math.min(LANGUAGE_MODAL_MAX_ROWS, filteredLanguages.length));
@@ -53,24 +54,24 @@ export function render({ modal, context }: ModalRenderProps) {
   return (
     <>
       <Box justifyContent="space-between" marginBottom={1}>
-        <Text color="#f0f0f0" bold>
+        <Text color={THEME.text} bold>
           Select Language
         </Text>
-        <Text color="#777777">esc</Text>
+        <Text color={THEME.textMuted}>esc</Text>
       </Box>
       <Box marginBottom={1}>
-        <Text color="#777777">Search </Text>
-        <Text color="#f0f0f0">{state.filter}</Text>
+        <Text color={THEME.textMuted}>Search </Text>
+        <Text color={THEME.text}>{state.filter}</Text>
         <Text color={subjectColor}>█</Text>
       </Box>
       <Box flexDirection="column" marginBottom={1}>
         {filteredLanguages.length === 0 ? (
-          <Text color="#777777">No languages found</Text>
+          <Text color={THEME.textMuted}>No languages found</Text>
         ) : (
           visibleLanguages.map((language, index) => {
             const languageIndex = windowStart + index;
             const isSelected = state.selected === languageIndex;
-            const isCurrent = context.session.studyLanguage === language;
+            const isCurrent = context.preferences.studyLanguage === language;
 
             return (
               <Box
@@ -78,26 +79,26 @@ export function render({ modal, context }: ModalRenderProps) {
                 backgroundColor={isSelected ? subjectColor : undefined}
                 justifyContent="space-between"
               >
-                <Text color={isSelected ? '#000000' : '#f0f0f0'} bold={isSelected}>
+                <Text color={isSelected ? THEME.onAccent : THEME.text} bold={isSelected}>
                   {language}
                 </Text>
-                {isCurrent && <Text color={isSelected ? '#000000' : '#22c55e'}>current</Text>}
+                {isCurrent && <Text color={isSelected ? THEME.onAccent : THEME.success}>current</Text>}
               </Box>
             );
           })
         )}
       </Box>
       <Box justifyContent="space-between">
-        <Text color="#777777">
+        <Text color={THEME.textMuted}>
           ↑↓ move {windowStart + 1}-{windowStart + visibleLanguages.length}/{filteredLanguages.length}
         </Text>
-        <Text color="#777777">enter select</Text>
+        <Text color={THEME.textMuted}>enter select</Text>
       </Box>
     </>
   );
 }
 
-export const handleInput = createHandleInput([
+export const handleInput = createHandleInput<LanguageModalState>([
   {
     when: isCancel,
     run: ({ context }) => context.closeModal(),
@@ -117,29 +118,27 @@ export const handleInput = createHandleInput([
   {
     when: isBackspace,
     run: ({ modal, context }) => {
-      const state = modal as LanguageModalState;
-      context.updateModal({ ...state, filter: state.filter.slice(0, -1), selected: 0 });
+      context.updateModal({ ...modal, filter: modal.filter.slice(0, -1), selected: 0 });
     },
   },
   {
     when: isPlainTextInput,
     run: ({ input, modal, context }) => {
-      const state = modal as LanguageModalState;
-      context.updateModal({ ...state, filter: state.filter + input, selected: 0 });
+      context.updateModal({ ...modal, filter: modal.filter + input, selected: 0 });
     },
   },
 ]);
 
-function selectLanguage({ modal, context }: ModalInputProps) {
-  const state = modal as LanguageModalState;
+function selectLanguage({ modal, context }: ModalInputProps<LanguageModalState>) {
+  const state = modal;
   const filteredLanguages = getFilteredLanguages(state);
   const language = filteredLanguages[state.selected];
-  if (language) context.updateSettings({ studyLanguage: language });
+  if (language) context.updatePreferences({ studyLanguage: language });
   context.closeModal();
 }
 
-function moveSelection({ modal, context }: ModalInputProps, direction: -1 | 1) {
-  const state = modal as LanguageModalState;
+function moveSelection({ modal, context }: ModalInputProps<LanguageModalState>, direction: -1 | 1) {
+  const state = modal;
   const filteredLanguages = getFilteredLanguages(state);
   const count = Math.max(1, filteredLanguages.length);
   context.updateModal({ ...state, selected: (state.selected + direction + count) % count });

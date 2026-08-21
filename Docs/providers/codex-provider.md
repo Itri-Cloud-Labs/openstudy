@@ -1,33 +1,32 @@
 # Codex provider
 
-OpenStudy registers Codex in `src/infrastructure/providers/registry.ts`. Most callers should use the shared registry instead of constructing the adapter directly.
+OpenStudy defines Codex in `src/providers/codex-provider.ts` and creates providers through the factory map in `src/providers/index.ts`.
 
 ```ts
-import { createProvider, getAvailableProviders } from '../../src/providers/index.js';
+import { createProvider, PROVIDER_METADATA } from '../../src/providers/index.js';
 
-const providers = getAvailableProviders();
+const metadata = PROVIDER_METADATA;
 const codex = createProvider('codex');
 ```
 
-The compatibility adapter supports the existing `AIProvider` interface:
+All providers implement the single `StudyProvider` contract:
 
 ```ts
-await codex.CheckLoginStatus();
+await codex.checkAuth();
 
-for await (const event of codex.Prompt('Explain recursion.', {
+const { text } = await codex.prompt('Explain recursion.', {
   model: 'gpt-5.5',
   reasoningEffort: 'medium',
   workingDirectory: process.cwd(),
-})) {
-  console.log(event);
-}
+});
+console.log(text);
 ```
 
-New infrastructure code should use the methods from `StudyProvider`: `checkAuth`, `listModels`, `streamPrompt`, and `dispose`. These methods accept abort signals where the operation can wait on a subprocess, provider server, or model response.
+The contract has four methods: `checkAuth`, `getModels`, `prompt`, and `dispose`. `prompt` resolves once with the final response text; there is no streaming. Methods accept abort signals where the operation can wait on a subprocess, provider server, or model response.
 
 Codex uses read-only sandboxing and an approval policy of `never` for study requests. File options attach local study material, while `responseSchema` requests structured output. Authentication uses the local Codex login or `OPENAI_API_KEY`.
 
-The registry owns provider metadata, factories, and cleanup. Add a provider in one registration and test it with a fake adapter before wiring a real SDK.
+Add a provider by implementing `StudyProvider`, adding its metadata to `PROVIDER_METADATA`, and registering a factory in `src/providers/index.ts`. Test it with a fake adapter before wiring a real SDK.
 
 Authenticate outside OpenStudy with:
 

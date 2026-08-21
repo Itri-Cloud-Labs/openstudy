@@ -1,11 +1,12 @@
 import React from 'react';
 import { Box, Text, useInput } from 'ink';
 import type { CommandContext, CommandModule } from '../../commands/index.js';
-import { SummaryMode, type SummaryModeProps } from './modes/summary/SummaryMode.js';
+import type { SessionPresentation } from '../session-presentation.js';
+import { SummaryMode, type ModeProps, type SummaryModeProps } from './modes/summary/SummaryMode.js';
 import { ModalHost, type ActiveModal, type ModalRenderContext, type ModalTrigger } from '../../modals/index.js';
 import { useSummary } from './modes/summary/useSummary.js';
 import { THEME } from '../../shared/theme.js';
-import type { Provider } from '../../types/index.js';
+import { truncate } from '../../shared/text.js';
 import { isTerminalMouseReport } from '../../utils/input.js';
 import { PromptInput } from '../../shared/ui/PromptInput.js';
 import { APP_VERSION } from '../../shared/metadata.js';
@@ -13,29 +14,25 @@ import { APP_VERSION } from '../../shared/metadata.js';
 const SIDEBAR_WIDTH = 42;
 const WIDE_TERMINAL_BREAKPOINT = 120;
 
-const SESSION_MODES = [
+interface SessionModeDefinition {
+  label: string;
+  Component: React.ComponentType<SummaryModeProps>;
+}
+
+const SESSION_MODES: readonly SessionModeDefinition[] = [
   { label: 'Summary', Component: SummaryMode },
   { label: 'Quiz', Component: QuizMode },
   { label: 'FlashCards', Component: FlashCardsMode },
   { label: 'Exercises', Component: ExercisesMode },
   { label: 'AI Teacher', Component: AiTeacherMode },
-] as const;
+];
 
 interface SessionScreenProps {
   termWidth: number;
   termHeight: number;
   sessionId: string | null;
   prompt: string;
-  subject: string;
-  subjectColor: string;
-  modelProvider: Provider | null;
-  provider: string;
-  model: string;
-  reasoningEffort: string;
-  material: string;
-  materialPath: string;
-  studyLanguage: string;
-  cwd: string;
+  presentation: SessionPresentation;
   commands: CommandModule[];
   commandContext: CommandContext;
   inputActive: boolean;
@@ -50,16 +47,7 @@ export const SessionScreen: React.FC<SessionScreenProps> = ({
   termHeight,
   sessionId,
   prompt,
-  subject,
-  subjectColor,
-  modelProvider,
-  provider,
-  model,
-  reasoningEffort,
-  material,
-  materialPath,
-  studyLanguage,
-  cwd,
+  presentation,
   commands,
   commandContext,
   inputActive,
@@ -76,11 +64,11 @@ export const SessionScreen: React.FC<SessionScreenProps> = ({
   const { summaryState, title } = useSummary({
     sessionId,
     prompt,
-    modelProvider,
-    model,
-    reasoningEffort,
-    materialPath,
-    studyLanguage,
+    modelProvider: presentation.modelProvider,
+    model: presentation.model,
+    reasoningEffort: presentation.reasoningEffort,
+    materialPath: presentation.materialPath,
+    studyLanguage: presentation.studyLanguage,
   });
   const ActiveMode = SESSION_MODES[activeModeIndex]?.Component ?? SummaryMode;
 
@@ -127,12 +115,8 @@ export const SessionScreen: React.FC<SessionScreenProps> = ({
             modalTriggers={modalTriggers}
             onModalTrigger={onModalTrigger}
             placeholder="Ask anything..."
-            subject={subject}
-            subjectColor={subjectColor}
-            model={model}
-            reasoningEffort={reasoningEffort}
-            material={material}
-            studyLanguage={studyLanguage}
+            subject={presentation.subject}
+            subjectColor={presentation.subjectColor}
             showContextRow={false}
             onMenuVisibleChange={setCommandMenuActive}
           />
@@ -164,12 +148,12 @@ export const SessionScreen: React.FC<SessionScreenProps> = ({
             </SidebarSection>
 
             <SidebarSection title="Settings">
-              <SidebarRow label="Subject" value={subject} valueColor={subjectColor} />
-              <SidebarRow label="Provider" value={provider} />
-              <SidebarRow label="Model" value={model} />
-              <SidebarRow label="Reasoning" value={reasoningEffort} />
-              <SidebarRow label="Material" value={material} />
-              <SidebarRow label="Language" value={studyLanguage} />
+              <SidebarRow label="Subject" value={presentation.subject} valueColor={presentation.subjectColor} />
+              <SidebarRow label="Provider" value={presentation.provider} />
+              <SidebarRow label="Model" value={presentation.model} />
+              <SidebarRow label="Reasoning" value={presentation.reasoningEffort} />
+              <SidebarRow label="Material" value={presentation.material} />
+              <SidebarRow label="Language" value={presentation.studyLanguage} />
             </SidebarSection>
 
             <SidebarSection title="Mode">
@@ -180,15 +164,15 @@ export const SessionScreen: React.FC<SessionScreenProps> = ({
                   return (
                     <Box
                       key={mode.label}
-                      backgroundColor={active ? subjectColor : undefined}
+                      backgroundColor={active ? presentation.subjectColor : undefined}
                       paddingX={1}
                       justifyContent="space-between"
                     >
-                      <Text color={active ? '#000000' : THEME.textMuted} bold={active}>
+                      <Text color={active ? THEME.onAccent : THEME.textMuted} bold={active}>
                         {mode.label}
                       </Text>
                       {active && (
-                        <Text color="#000000" bold>
+                        <Text color={THEME.onAccent} bold>
                           active
                         </Text>
                       )}
@@ -206,7 +190,7 @@ export const SessionScreen: React.FC<SessionScreenProps> = ({
             <Text color={THEME.textMuted}>
               <Text color={THEME.success}>*</Text>
               {' dir: '}
-              {cwd}
+              {presentation.cwd}
             </Text>
             <Text color={THEME.textMuted}>OpenStudy {APP_VERSION}</Text>
           </Box>
@@ -218,19 +202,19 @@ export const SessionScreen: React.FC<SessionScreenProps> = ({
   );
 };
 
-function QuizMode(_props: SummaryModeProps) {
+function QuizMode(_props: ModeProps) {
   return <ModePlaceholder name="Quiz" />;
 }
 
-function FlashCardsMode(_props: SummaryModeProps) {
+function FlashCardsMode(_props: ModeProps) {
   return <ModePlaceholder name="FlashCards" />;
 }
 
-function ExercisesMode(_props: SummaryModeProps) {
+function ExercisesMode(_props: ModeProps) {
   return <ModePlaceholder name="Exercises" />;
 }
 
-function AiTeacherMode(_props: SummaryModeProps) {
+function AiTeacherMode(_props: ModeProps) {
   return <ModePlaceholder name="AI Teacher" />;
 }
 
@@ -262,8 +246,4 @@ function SidebarRow({ label, value, valueColor = THEME.text }: { label: string; 
       <Text color={valueColor}>{truncate(value, 22)}</Text>
     </Box>
   );
-}
-
-function truncate(value: string, maxLength: number) {
-  return value.length > maxLength ? `${value.slice(0, maxLength - 3)}...` : value;
 }

@@ -1,7 +1,7 @@
 import React from 'react';
 import { Box, Text, useInput } from 'ink';
-import { PROVIDERS } from '../../types/index.js';
-import type { Provider } from '../../types/index.js';
+import type { Provider } from '../../domain/provider.js';
+import { PROVIDER_METADATA } from '../../providers/index.js';
 
 interface ProviderSelectorProps {
   onSelect: (provider: Provider) => void;
@@ -12,11 +12,11 @@ export const ProviderSelector: React.FC<ProviderSelectorProps> = ({ onSelect }) 
 
   useInput((_, key) => {
     if (key.upArrow) {
-      setCursor(prev => (prev - 1 + PROVIDERS.length) % PROVIDERS.length);
+      setCursor(prev => (prev - 1 + PROVIDER_METADATA.length) % PROVIDER_METADATA.length);
     } else if (key.downArrow) {
-      setCursor(prev => (prev + 1) % PROVIDERS.length);
+      setCursor(prev => (prev + 1) % PROVIDER_METADATA.length);
     } else if (key.return) {
-      const provider = PROVIDERS[cursor];
+      const provider = PROVIDER_METADATA[cursor];
       if (provider) onSelect(provider.id);
     }
   });
@@ -27,7 +27,7 @@ export const ProviderSelector: React.FC<ProviderSelectorProps> = ({ onSelect }) 
         Select an AI provider:
       </Text>
       <Box flexDirection="column">
-        {PROVIDERS.map((provider, index) => {
+        {PROVIDER_METADATA.map((provider, index) => {
           const isActive = index === cursor;
           return (
             <Box key={provider.id} paddingLeft={1}>

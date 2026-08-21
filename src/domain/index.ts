@@ -1,4 +1,4 @@
-export { isProvider, type Provider, type ProviderConfig } from './provider.js';
+export { isProvider, type ActiveProviderConfig, type Provider, type ProviderConfig } from './provider.js';
 export { materialRefFromLegacy, materialRefToLegacy, type MaterialRef } from './material.js';
 export {
   DEFAULT_SUBJECT,
@@ -9,12 +9,7 @@ export {
   normalizeAppPreferences,
   normalizeModeResults,
   normalizeStudySession,
-  preferencesFromSessionSettings,
-  providerConfigFromLegacy,
-  sessionSettingsFromDomain,
-  studySessionFromSettings,
   type AppPreferences,
   type ModeResults,
-  type SessionSettings,
   type StudySession,
 } from './study.js';

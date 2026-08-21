@@ -1,10 +1,5 @@
 import { createOpencode } from '@opencode-ai/sdk/v2';
-import type {
-  LegacyCompatibleStudyProvider,
-  ProviderModelOption,
-  ProviderPromptOptions,
-  ProviderPromptStreamEvent,
-} from './contracts.js';
+import type { ProviderModelOption, ProviderPromptOptions, ProviderPromptResult, StudyProvider } from './contracts.js';
 import { createProviderAbortError, normalizeProviderError, throwIfProviderAborted } from './errors.js';
 import { buildMaterialPrompt, resolvePromptFiles } from './material-prompt.js';
 
@@ -75,7 +70,7 @@ const DEFAULT_MODEL = 'anthropic/claude-sonnet-4-5';
 export const OPENCODE_MODEL_OPTIONS: ProviderModelOption[] = [];
 export const OPENCODE_MODELS: string[] = [];
 
-export class OpenCodeProvider implements LegacyCompatibleStudyProvider<'opencode'> {
+export class OpenCodeProvider implements StudyProvider<'opencode'> {
   readonly id = 'opencode';
   readonly label = 'OpenCode';
 
@@ -94,14 +89,14 @@ export class OpenCodeProvider implements LegacyCompatibleStudyProvider<'opencode
     if (!health.data?.healthy) throw new Error(OPENCODE_LOGIN_REQUIRED_MESSAGE);
   }
 
-  async listModels(signal?: AbortSignal): Promise<ProviderModelOption[]> {
+  async refreshModels(signal?: AbortSignal): Promise<void> {
     await this.checkAuth(signal);
     const current = await getOrCreateOpencode(signal);
 
     try {
       const result = await current.client.provider.list();
       throwIfProviderAborted(signal);
-      if (!result.data) return cloneModelOptions(cachedModels ?? []);
+      if (!result.data) return;
 
       const { all, connected } = result.data;
       const options: ProviderModelOption[] = [];
@@ -124,15 +119,16 @@ export class OpenCodeProvider implements LegacyCompatibleStudyProvider<'opencode
       if (options.length > 0) cachedModels = options;
     } catch {
       if (signal?.aborted) throw createProviderAbortError(signal.reason);
-      // Model discovery was non-fatal in the legacy provider. Keep any last
-      // successful result and allow the auth check to remain usable.
+      // Model discovery is non-fatal. Keep any last successful result and
+      // allow the auth check to remain usable.
     }
+  }
 
+  getModels(): ProviderModelOption[] {
     return cloneModelOptions(cachedModels ?? []);
   }
 
-  async *streamPrompt(input: string, options: ProviderPromptOptions = {}): AsyncGenerator<ProviderPromptStreamEvent> {
-    yield { type: 'status', text: 'Checking login' };
+  async prompt(input: string, options: ProviderPromptOptions = {}): Promise<ProviderPromptResult> {
     throwIfProviderAborted(options.signal);
 
     let current: OpenCodeInstance;
@@ -150,15 +146,7 @@ export class OpenCodeProvider implements LegacyCompatibleStudyProvider<'opencode
     const modelId = slashIndex >= 0 ? modelString.slice(slashIndex + 1) : modelString;
     const fullInput = buildMaterialPrompt(input, resolvePromptFiles(options));
 
-    yield { type: 'status', text: 'Starting session' };
-
     let sessionId: string | null = null;
-    let eventSubscription: Awaited<ReturnType<typeof client.event.subscribe>> | null = null;
-    let promptPromise: ReturnType<typeof client.session.prompt> | null = null;
-
-    const structured = Boolean(options.responseSchema);
-    let hasResponse = false;
-    let responseText = '';
 
     try {
       const sessionResult = await client.session.create({
@@ -169,57 +157,31 @@ export class OpenCodeProvider implements LegacyCompatibleStudyProvider<'opencode
       if (!sessionResult.data) throw new Error('Failed to create OpenCode session');
       sessionId = sessionResult.data.id;
 
-      eventSubscription = await client.event.subscribe();
-      throwIfProviderAborted(options.signal);
-
-      // OpenCode suppresses text-delta streaming when json_schema format is
-      // active, so structured prompts rely on the model's JSON instructions.
-      promptPromise = client.session.prompt({
+      // Structured prompts rely on the model's JSON instructions; OpenCode
+      // suppresses text streaming when json_schema format is active.
+      const result = await client.session.prompt({
         sessionID: sessionId,
         parts: [{ type: 'text', text: fullInput }],
         model: { providerID: providerId, modelID: modelId },
         agent: 'study',
         ...(options.system ? { system: options.system } : {}),
       });
+      throwIfProviderAborted(options.signal);
 
-      yield { type: 'status', text: structured ? 'Waiting for structured response' : 'Waiting for response' };
-
-      for await (const event of eventSubscription.stream) {
-        throwIfProviderAborted(options.signal);
-
-        if (event.type === 'session.next.text.delta') {
-          if (event.properties.sessionID !== sessionId) continue;
-          hasResponse = true;
-          responseText += event.properties.delta;
-          yield { type: 'response', text: responseText };
-        } else if (event.type === 'session.next.reasoning.started') {
-          if (event.properties.sessionID !== sessionId) continue;
-          if (!hasResponse) yield { type: 'status', text: 'Analyzing key ideas' };
-        } else if (event.type === 'session.error') {
-          if (event.properties.sessionID !== sessionId) continue;
-          throw normalizeProviderError(event.properties.error, {
-            fallbackMessage: 'An error occurred during the session.',
-            signal: options.signal,
-          });
-        } else if (event.type === 'message.updated') {
-          if (event.properties.sessionID !== sessionId) continue;
-          const message = event.properties.info;
-          if (message.role === 'assistant' && message.error) {
-            throw normalizeProviderError(message.error, {
-              fallbackMessage: 'An error occurred during the session.',
-              signal: options.signal,
-            });
-          }
-        } else if (event.type === 'session.idle' && event.properties.sessionID === sessionId) {
-          break;
-        }
+      if (result.data?.info.error) {
+        throw normalizeProviderError(result.data.info.error, {
+          fallbackMessage: 'An error occurred during the session.',
+          signal: options.signal,
+        });
       }
 
-      await promptPromise.catch(() => null);
-
-      if (structured && responseText) {
-        yield { type: 'response', text: responseText };
-      }
+      const text = (result.data?.parts ?? [])
+        .filter(part => part.type === 'text')
+        .map(part => part.text)
+        .join('')
+        .trim();
+      if (!text) throw new Error('The provider returned an empty response.');
+      return { text };
     } catch (error) {
       throw normalizeProviderError(error, {
         fallbackMessage: 'An error occurred during the session.',
@@ -229,12 +191,6 @@ export class OpenCodeProvider implements LegacyCompatibleStudyProvider<'opencode
       if (options.signal?.aborted && sessionId) {
         await client.session.abort({ sessionID: sessionId }).catch(() => null);
       }
-      if (promptPromise) {
-        await promptPromise.catch(() => null);
-      }
-      if (eventSubscription) {
-        await eventSubscription.stream.return(undefined).catch(() => undefined);
-      }
       if (sessionId) {
         await client.session.delete({ sessionID: sessionId }).catch(() => null);
       }
@@ -243,19 +199,6 @@ export class OpenCodeProvider implements LegacyCompatibleStudyProvider<'opencode
 
   async dispose(): Promise<void> {
     await disposeOpenCodeProvider();
-  }
-
-  async CheckLoginStatus(): Promise<boolean> {
-    await this.listModels();
-    return true;
-  }
-
-  GetModels(): ProviderModelOption[] {
-    return cloneModelOptions(cachedModels ?? []);
-  }
-
-  async *Prompt(input: string, options: ProviderPromptOptions = {}): AsyncGenerator<ProviderPromptStreamEvent> {
-    yield* this.streamPrompt(input, options);
   }
 }
 

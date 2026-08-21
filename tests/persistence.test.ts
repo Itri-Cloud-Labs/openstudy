@@ -32,65 +32,6 @@ test(
 );
 
 test(
-  'initialize migrates legacy preferences and sessions without copying credentials into sessions',
-  withTemporaryRoot(root => {
-    const sessionId = '86e7f39b-bad6-4f5a-a46d-a52b09ea9b95';
-    const sessionDirectory = path.join(root, sessionId);
-    fs.mkdirSync(sessionDirectory, { recursive: true });
-    fs.writeFileSync(path.join(root, 'config.json'), JSON.stringify({ provider: 'codex', apiKey: 'secret' }));
-    fs.writeFileSync(
-      path.join(root, 'session.json'),
-      JSON.stringify({
-        provider: 'codex',
-        apiKey: 'secret',
-        subject: 'Biology',
-        modelProvider: 'codex',
-        model: 'gpt-test',
-        reasoningEffort: 'medium',
-        material: '/tmp/cells.pdf',
-        studyLanguage: 'English',
-        createdDate: '2025-01-01T00:00:00.000Z',
-        lastOpenedDate: '2025-01-02T00:00:00.000Z',
-      }),
-    );
-    fs.writeFileSync(
-      path.join(sessionDirectory, 'session.json'),
-      JSON.stringify({
-        sessionId,
-        provider: 'codex',
-        apiKey: 'secret',
-        title: 'Cells',
-        summaryText: '## Cell notes',
-        subject: 'Biology',
-        modelProvider: 'codex',
-        model: 'gpt-test',
-        reasoningEffort: 'medium',
-        material: '/tmp/cells.pdf',
-        studyLanguage: 'English',
-        createdDate: '2025-01-01T00:00:00.000Z',
-        lastOpenedDate: '2025-01-02T00:00:00.000Z',
-      }),
-    );
-
-    const persistence = createPersistence({ rootDir: root });
-    const report = persistence.initialize();
-
-    assert.equal(report.errors.length, 0);
-    assert.deepEqual(persistence.readProviderConfig(), { provider: 'codex', apiKey: 'secret' });
-    assert.equal(persistence.readAppPreferences()?.preferences.subject, 'Biology');
-    assert.equal(persistence.readStudySession(sessionId)?.modeResults.summary, '## Cell notes');
-
-    const storedSession = fs.readFileSync(path.join(sessionDirectory, 'session.json'), 'utf8');
-    assert.doesNotMatch(storedSession, /secret/);
-    assert.doesNotMatch(storedSession, /apiKey/);
-
-    const secondReport = persistence.initialize();
-    assert.equal(secondReport.errors.length, 0);
-    assert.equal(secondReport.migrated.length, 0);
-  }),
-);
-
-test(
   'session creation uses injected ids and clocks and stores an immutable settings snapshot',
   withTemporaryRoot(root => {
     const persistence = createPersistence({
@@ -98,7 +39,6 @@ test(
       clock: () => new Date('2026-08-21T10:00:00.000Z'),
       idGenerator: () => 'session-1',
     });
-    persistence.initialize();
     const preferences = {
       ...createDefaultAppPreferences(),
       subject: 'Mathematics',
@@ -115,10 +55,36 @@ test(
 );
 
 test(
+  'written documents round-trip through reads',
+  withTemporaryRoot(root => {
+    const persistence = createPersistence({ rootDir: root });
+
+    persistence.writeProviderConfig({ provider: 'codex', apiKey: 'secret' });
+    assert.deepEqual(persistence.readProviderConfig(), { provider: 'codex', apiKey: 'secret' });
+
+    const preferences = { ...createDefaultAppPreferences(), subject: 'Biology' };
+    const record = persistence.writeAppPreferences(preferences, {
+      createdAt: '2026-01-01T00:00:00.000Z',
+    });
+    assert.equal(record.preferences.subject, 'Biology');
+    assert.equal(persistence.readAppPreferences()?.createdAt, '2026-01-01T00:00:00.000Z');
+
+    const session = persistence.createStudySession({ title: null, preferences });
+    const touched = persistence.touchStudySession(session.id);
+    assert.ok(touched);
+    assert.equal(touched.id, session.id);
+
+    assert.deepEqual(
+      persistence.listStudySessions().map(item => item.id),
+      [session.id],
+    );
+  }),
+);
+
+test(
   'atomic writes leave no temporary files behind',
   withTemporaryRoot(root => {
     const persistence = createPersistence({ rootDir: root });
-    persistence.initialize();
     persistence.writeProviderConfig({ provider: 'opencode', apiKey: '' });
 
     assert.deepEqual(

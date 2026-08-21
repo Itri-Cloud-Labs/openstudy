@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { parseSummaryPayload } from '../src/session/summaryPayload.ts';
+import { parseSummaryPayload } from '../src/features/study-session/modes/summary/summary-payload.ts';
 
 test('parseSummaryPayload reads complete JSON', () => {
   assert.deepEqual(parseSummaryPayload('{"SessionTitle":"Cells","content":"## Notes"}'), {

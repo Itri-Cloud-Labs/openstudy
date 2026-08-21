@@ -1,8 +1,9 @@
 import React from 'react';
 import { Box, Text, useInput } from 'ink';
 import { lexer, type Token, type Tokens } from 'marked';
-import { SUMMARY_LOADING_STEPS, type SummaryState } from './useSummary.js';
+import { type SummaryState } from './useSummary.js';
 import { THEME } from '../../../../shared/theme.js';
+import { truncate } from '../../../../shared/text.js';
 import { isTerminalMouseReport, parseMouseWheelScroll } from '../../../../utils/input.js';
 
 type SummaryLine = {
@@ -12,12 +13,15 @@ type SummaryLine = {
   dim?: boolean;
 };
 
-export interface SummaryModeProps {
+export interface ModeProps {
   contentWidth: number;
   contentHeight: number;
-  summaryState: SummaryState;
   inputActive: boolean;
   commandMenuActive: boolean;
+}
+
+export interface SummaryModeProps extends ModeProps {
+  summaryState: SummaryState;
 }
 
 export function SummaryMode({
@@ -48,7 +52,7 @@ export function SummaryMode({
   }, [maxScroll]);
 
   React.useEffect(() => {
-    if (summaryState.status !== 'loading' && summaryState.status !== 'streaming') {
+    if (summaryState.status !== 'loading') {
       setAnimationFrame(0);
       return;
     }
@@ -66,14 +70,14 @@ export function SummaryMode({
     (input, key) => {
       const mouseScroll = parseMouseWheelScroll(input);
       if (mouseScroll !== 0) {
-        if (summaryState.status === 'ready' || summaryState.status === 'streaming') {
+        if (summaryState.status === 'ready') {
           setScroll(current => Math.max(0, Math.min(maxScroll, current + mouseScroll)));
         }
         return;
       }
 
       if (isTerminalMouseReport(input)) return;
-      if (summaryState.status !== 'ready' && summaryState.status !== 'streaming') return;
+      if (summaryState.status !== 'ready') return;
 
       if (key.pageUp) {
         setScroll(current => Math.max(0, current - visibleRows));
@@ -166,34 +170,12 @@ function ScrollBar({
 
 function buildSummaryLines(summaryState: SummaryState, width: number, animationFrame: number): SummaryLine[] {
   if (summaryState.status === 'loading') {
-    const activeStepIndex = Math.max(
-      0,
-      SUMMARY_LOADING_STEPS.indexOf(summaryState.step as (typeof SUMMARY_LOADING_STEPS)[number]),
-    );
     const dots = '.'.repeat((animationFrame % 3) + 1);
-
-    return [
-      { text: 'Preparing summary', color: THEME.text },
-      ...SUMMARY_LOADING_STEPS.map((step, index) => {
-        if (index < activeStepIndex) {
-          return { text: `[x] ${step}`, color: THEME.success };
-        }
-
-        if (index === activeStepIndex) {
-          return { text: `[>] ${step}${dots}`, color: THEME.text };
-        }
-
-        return { text: `[ ] ${step}`, color: THEME.textMuted };
-      }),
-    ].flatMap(line => wrapSummaryLine(line, width));
+    return wrapSummaryLine({ text: `Generating summary${dots}`, color: THEME.text }, width);
   }
 
   if (summaryState.status === 'error') {
-    return wrapSummaryLine({ text: summaryState.error, color: THEME.danger }, width);
-  }
-
-  if (summaryState.status === 'streaming') {
-    return appendStreamingIndicator(buildMarkdownSummaryLines(summaryState.response, width), animationFrame);
+    return wrapSummaryLine({ text: summaryState.error ?? 'Something went wrong.', color: THEME.danger }, width);
   }
 
   return buildMarkdownSummaryLines(summaryState.response, width);
@@ -202,10 +184,6 @@ function buildSummaryLines(summaryState: SummaryState, width: number, animationF
 function getSummaryStatusLabel(status: SummaryState['status'], maxScroll: number) {
   if (status === 'ready') {
     return maxScroll > 0 ? 'up/down scroll' : 'ready';
-  }
-
-  if (status === 'streaming') {
-    return maxScroll > 0 ? 'streaming - up/down scroll' : 'streaming';
   }
 
   return status;
@@ -438,23 +416,6 @@ function inlineText(tokens: Token[]): string {
     .join('');
 }
 
-function appendStreamingIndicator(lines: SummaryLine[], animationFrame: number) {
-  const indicator = '.'.repeat((animationFrame % 3) + 1);
-
-  if (lines.length === 0) {
-    return [{ text: indicator, color: THEME.textMuted }];
-  }
-
-  return lines.map((line, index) => {
-    if (index !== lines.length - 1) return line;
-
-    return {
-      ...line,
-      text: `${line.text}${indicator}`,
-    };
-  });
-}
-
 function wrapText(text: string, width: number) {
   return text.split('\n').flatMap(line => {
     if (!line) return [''];
@@ -466,8 +427,4 @@ function wrapText(text: string, width: number) {
 
     return chunks.length > 0 ? chunks : [''];
   });
-}
-
-function truncate(value: string, maxLength: number) {
-  return value.length > maxLength ? `${value.slice(0, maxLength - 3)}...` : value;
 }

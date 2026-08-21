@@ -1,18 +1,19 @@
 import { Box, Text } from 'ink';
 import { subjects } from '../options/index.js';
-import { focusTextColor } from '../utils/index.js';
+import { focusTextColor } from '../utils/colors.js';
 import { createHandleInput, isBackspace, isCancel, isPlainTextInput, isSubmit } from './input.js';
-import type { ModalContext, ModalInputProps, ModalRenderProps, ModalState } from './types.js';
+import type { ModalContext, ModalInputProps, ModalRenderProps } from './types.js';
+import { THEME } from '../shared/theme.js';
 
 const SUBJECT_MODAL_MAX_ROWS = 6;
 
-interface SubjectsModalState extends ModalState {
+interface SubjectsModalState {
   id: 'subjects';
   filter: string;
   selected: number;
 }
 
-export function open(context: ModalContext): ModalState {
+export function open(context: ModalContext): SubjectsModalState {
   const selected = Math.max(
     0,
     subjects.findIndex(subject => subject.name === context.selectedSubject?.name),
@@ -21,14 +22,14 @@ export function open(context: ModalContext): ModalState {
   return { id: 'subjects', filter: '', selected };
 }
 
-export function getHeight(modal: ModalState) {
-  const filteredSubjects = getFilteredSubjects(modal as SubjectsModalState);
+export function getHeight(modal: SubjectsModalState) {
+  const filteredSubjects = getFilteredSubjects(modal);
   const subjectRows = Math.max(1, Math.min(SUBJECT_MODAL_MAX_ROWS, filteredSubjects.length));
   return subjectRows + 7;
 }
 
-export function render({ modal, context }: ModalRenderProps) {
-  const state = modal as SubjectsModalState;
+export function render({ modal, context }: ModalRenderProps<SubjectsModalState>) {
+  const state = modal;
   const subjectColor = context.selectedSubject?.color ?? '#3b82f6';
 
   const filteredSubjects = getFilteredSubjects(state);
@@ -42,19 +43,19 @@ export function render({ modal, context }: ModalRenderProps) {
   return (
     <>
       <Box justifyContent="space-between" marginBottom={1}>
-        <Text color="#f0f0f0" bold>
+        <Text color={THEME.text} bold>
           Select Subject
         </Text>
-        <Text color="#777777">esc</Text>
+        <Text color={THEME.textMuted}>esc</Text>
       </Box>
       <Box marginBottom={1}>
-        <Text color="#777777">Search </Text>
-        <Text color="#f0f0f0">{state.filter}</Text>
+        <Text color={THEME.textMuted}>Search </Text>
+        <Text color={THEME.text}>{state.filter}</Text>
         <Text color={subjectColor}>█</Text>
       </Box>
       <Box flexDirection="column" marginBottom={1}>
         {filteredSubjects.length === 0 ? (
-          <Text color="#777777">No results found</Text>
+          <Text color={THEME.textMuted}>No results found</Text>
         ) : (
           visibleSubjects.map((subject, index) => {
             const subjectIndex = subjectWindowStart + index;
@@ -65,7 +66,7 @@ export function render({ modal, context }: ModalRenderProps) {
                 <Text color={focusTextColor(subject.color, subjectColor, isSelected)} bold={isSelected}>
                   ●{' '}
                 </Text>
-                <Text color={isSelected ? '#000000' : '#f0f0f0'} bold={isSelected}>
+                <Text color={isSelected ? THEME.onAccent : THEME.text} bold={isSelected}>
                   {subject.name}
                 </Text>
               </Box>
@@ -74,16 +75,16 @@ export function render({ modal, context }: ModalRenderProps) {
         )}
       </Box>
       <Box justifyContent="space-between">
-        <Text color="#777777">
+        <Text color={THEME.textMuted}>
           ↑↓ move {subjectWindowStart + 1}-{subjectWindowStart + visibleSubjects.length}/{filteredSubjects.length}
         </Text>
-        <Text color="#777777">enter select</Text>
+        <Text color={THEME.textMuted}>enter select</Text>
       </Box>
     </>
   );
 }
 
-export const handleInput = createHandleInput([
+export const handleInput = createHandleInput<SubjectsModalState>([
   {
     when: isCancel,
     run: ({ context }) => context.closeModal(),
@@ -103,29 +104,27 @@ export const handleInput = createHandleInput([
   {
     when: isBackspace,
     run: ({ modal, context }) => {
-      const state = modal as SubjectsModalState;
-      context.updateModal({ ...state, filter: state.filter.slice(0, -1), selected: 0 });
+      context.updateModal({ ...modal, filter: modal.filter.slice(0, -1), selected: 0 });
     },
   },
   {
     when: isPlainTextInput,
     run: ({ input, modal, context }) => {
-      const state = modal as SubjectsModalState;
-      context.updateModal({ ...state, filter: state.filter + input, selected: 0 });
+      context.updateModal({ ...modal, filter: modal.filter + input, selected: 0 });
     },
   },
 ]);
 
-function selectSubject({ modal, context }: ModalInputProps) {
-  const state = modal as SubjectsModalState;
+function selectSubject({ modal, context }: ModalInputProps<SubjectsModalState>) {
+  const state = modal;
   const filteredSubjects = getFilteredSubjects(state);
   const subject = filteredSubjects[state.selected];
-  if (subject) context.updateSettings({ subject: subject.name });
+  if (subject) context.updatePreferences({ subject: subject.name });
   context.closeModal();
 }
 
-function moveSelection({ modal, context }: ModalInputProps, direction: -1 | 1) {
-  const state = modal as SubjectsModalState;
+function moveSelection({ modal, context }: ModalInputProps<SubjectsModalState>, direction: -1 | 1) {
+  const state = modal;
   const filteredSubjects = getFilteredSubjects(state);
   const count = Math.max(1, filteredSubjects.length);
   context.updateModal({ ...state, selected: (state.selected + direction + count) % count });

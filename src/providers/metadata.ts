@@ -1,4 +1,4 @@
-import type { Provider } from '../../domain/provider.js';
+import type { Provider } from '../domain/provider.js';
 import type { ProviderMetadata } from './contracts.js';
 
 /**

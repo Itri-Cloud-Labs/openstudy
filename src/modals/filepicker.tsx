@@ -1,8 +1,10 @@
 import { Box, Text } from 'ink';
 import { materialService, type MaterialEntry } from '../infrastructure/materials/index.js';
-import { focusTextColor } from '../utils/index.js';
+import { truncateError } from '../shared/text.js';
+import { focusTextColor } from '../utils/colors.js';
 import { createHandleInput, isBackspace, isCancel, isPlainTextInput, isSubmit } from './input.js';
-import type { ModalContext, ModalInputProps, ModalRenderProps, ModalState } from './types.js';
+import type { ModalContext, ModalInputProps, ModalRenderProps } from './types.js';
+import { THEME } from '../shared/theme.js';
 
 const FILE_PICKER_MAX_ROWS = 10;
 const HOME_DIR = materialService.homeDirectory;
@@ -17,12 +19,12 @@ type FilePickerModalState =
   | { id: 'filepicker'; layer: 'browser'; cwd: string; entries: FilePickerEntry[]; selected: number; error?: string }
   | { id: 'filepicker'; layer: 'url'; url: string; downloading: boolean; error?: string };
 
-export function open(_context: ModalContext): ModalState {
+export function open(_context: ModalContext): FilePickerModalState {
   return { id: 'filepicker', layer: 'source', selected: 0 };
 }
 
-export function getHeight(modal: ModalState) {
-  const state = modal as FilePickerModalState;
+export function getHeight(modal: FilePickerModalState) {
+  const state = modal;
   if (state.layer === 'source') return SOURCE_OPTIONS.length + 7;
   if (state.layer === 'url') return 8;
 
@@ -30,30 +32,27 @@ export function getHeight(modal: ModalState) {
   return rows + 8;
 }
 
-export function render(props: ModalRenderProps) {
-  const state = props.modal as FilePickerModalState;
+export function render(props: ModalRenderProps<FilePickerModalState>) {
+  const state = props.modal;
 
   if (state.layer === 'source') return <SourceLayer {...props} modal={state} />;
   if (state.layer === 'url') return <UrlLayer modal={state} />;
   return <BrowserLayer {...props} modal={state} />;
 }
 
-function SourceLayer({
-  modal,
-  context,
-}: ModalRenderProps & { modal: Extract<FilePickerModalState, { layer: 'source' }> }) {
+function SourceLayer({ modal, context }: ModalRenderProps<Extract<FilePickerModalState, { layer: 'source' }>>) {
   const subjectColor = context.selectedSubject?.color ?? '#3b82f6';
 
   return (
     <>
       <Box justifyContent="space-between" marginBottom={1}>
-        <Text color="#f0f0f0" bold>
+        <Text color={THEME.text} bold>
           Add Material
         </Text>
-        <Text color="#777777">esc</Text>
+        <Text color={THEME.textMuted}>esc</Text>
       </Box>
       <Box marginBottom={1}>
-        <Text color="#777777">Choose where your document comes from.</Text>
+        <Text color={THEME.textMuted}>Choose where your document comes from.</Text>
       </Box>
       <Box flexDirection="column" marginBottom={1}>
         {SOURCE_OPTIONS.map((option, index) => {
@@ -61,17 +60,17 @@ function SourceLayer({
 
           return (
             <Box key={option.id} backgroundColor={isSelected ? subjectColor : undefined} justifyContent="space-between">
-              <Text color={isSelected ? '#000000' : '#f0f0f0'} bold={isSelected}>
+              <Text color={isSelected ? THEME.onAccent : THEME.text} bold={isSelected}>
                 {option.label}
               </Text>
-              <Text color={isSelected ? '#000000' : '#777777'}>{option.description}</Text>
+              <Text color={isSelected ? THEME.onAccent : THEME.textMuted}>{option.description}</Text>
             </Box>
           );
         })}
       </Box>
       <Box justifyContent="space-between">
-        <Text color={modal.error ? '#ef4444' : '#777777'}>{modal.error ?? '↑↓ move'}</Text>
-        <Text color="#777777">enter continue</Text>
+        <Text color={modal.error ? THEME.danger : THEME.textMuted}>{modal.error ?? '↑↓ move'}</Text>
+        <Text color={THEME.textMuted}>enter continue</Text>
       </Box>
     </>
   );
@@ -81,32 +80,29 @@ function UrlLayer({ modal }: { modal: Extract<FilePickerModalState, { layer: 'ur
   return (
     <>
       <Box justifyContent="space-between" marginBottom={1}>
-        <Text color="#f0f0f0" bold>
+        <Text color={THEME.text} bold>
           Material URL
         </Text>
-        <Text color="#777777">esc</Text>
+        <Text color={THEME.textMuted}>esc</Text>
       </Box>
       <Box marginBottom={1}>
-        <Text color="#777777">Enter a direct document URL. Use ctrl+v to paste from clipboard.</Text>
+        <Text color={THEME.textMuted}>Enter a direct document URL. Use ctrl+v to paste from clipboard.</Text>
       </Box>
-      <Box backgroundColor="#1f1f23" paddingX={1} marginBottom={1}>
-        <Text color={modal.url ? '#f0f0f0' : '#777777'}>{modal.url || 'https://example.com/document.pdf'}</Text>
-        {!modal.downloading && <Text color="#f0a500">█</Text>}
+      <Box backgroundColor={THEME.backgroundRaised} paddingX={1} marginBottom={1}>
+        <Text color={modal.url ? THEME.text : THEME.textMuted}>{modal.url || 'https://example.com/document.pdf'}</Text>
+        {!modal.downloading && <Text color={THEME.primary}>█</Text>}
       </Box>
       <Box justifyContent="space-between">
-        <Text color={modal.error ? '#ef4444' : '#777777'}>
+        <Text color={modal.error ? THEME.danger : THEME.textMuted}>
           {modal.error ? truncateError(modal.error) : '← sources'}
         </Text>
-        <Text color="#777777">{modal.downloading ? 'downloading...' : 'enter download'}</Text>
+        <Text color={THEME.textMuted}>{modal.downloading ? 'downloading...' : 'enter download'}</Text>
       </Box>
     </>
   );
 }
 
-function BrowserLayer({
-  modal,
-  context,
-}: ModalRenderProps & { modal: Extract<FilePickerModalState, { layer: 'browser' }> }) {
+function BrowserLayer({ modal, context }: ModalRenderProps<Extract<FilePickerModalState, { layer: 'browser' }>>) {
   const state = modal;
   const subjectColor = context.selectedSubject?.color ?? '#3b82f6';
   const rows = Math.max(1, Math.min(FILE_PICKER_MAX_ROWS, state.entries.length));
@@ -116,22 +112,22 @@ function BrowserLayer({
   return (
     <>
       <Box justifyContent="space-between" marginBottom={1}>
-        <Text color="#f0f0f0" bold>
+        <Text color={THEME.text} bold>
           Select Material
         </Text>
-        <Text color="#777777">esc</Text>
+        <Text color={THEME.textMuted}>esc</Text>
       </Box>
       <Box marginBottom={1}>
-        <Text color="#777777">{materialService.shortenPath(state.cwd)}</Text>
+        <Text color={THEME.textMuted}>{materialService.shortenPath(state.cwd)}</Text>
       </Box>
       <Box flexDirection="column" marginBottom={1}>
         {visibleEntries.length === 0 ? (
-          <Text color="#777777">No documents found</Text>
+          <Text color={THEME.textMuted}>No documents found</Text>
         ) : (
           visibleEntries.map((entry, index) => {
             const entryIndex = windowStart + index;
             const isSelected = state.selected === entryIndex;
-            const iconColor = entry.type === 'directory' ? subjectColor : '#888888';
+            const iconColor = entry.type === 'directory' ? subjectColor : THEME.textMuted;
 
             return (
               <Box
@@ -142,23 +138,25 @@ function BrowserLayer({
                 <Text color={focusTextColor(iconColor, subjectColor, isSelected)} bold={isSelected}>
                   {entry.type === 'directory' ? '▸ ' : '  '}
                 </Text>
-                <Text color={isSelected ? '#000000' : '#f0f0f0'} bold={isSelected}>
+                <Text color={isSelected ? THEME.onAccent : THEME.text} bold={isSelected}>
                   {entry.name}
                 </Text>
-                <Text color={isSelected ? '#000000' : '#777777'}>{entry.type === 'directory' ? 'dir' : 'file'}</Text>
+                <Text color={isSelected ? THEME.onAccent : THEME.textMuted}>
+                  {entry.type === 'directory' ? 'dir' : 'file'}
+                </Text>
               </Box>
             );
           })
         )}
       </Box>
       <Box justifyContent="space-between">
-        <Text color={state.error ? '#ef4444' : '#777777'}>
+        <Text color={state.error ? THEME.danger : THEME.textMuted}>
           {state.error ? truncateError(state.error) : state.cwd === HOME_DIR ? '← sources' : '← parent'}
         </Text>
-        <Text color="#777777">enter open/select</Text>
+        <Text color={THEME.textMuted}>enter open/select</Text>
       </Box>
       <Box justifyContent="flex-end">
-        <Text color="#777777">
+        <Text color={THEME.textMuted}>
           {windowStart + 1}-{windowStart + visibleEntries.length}/{state.entries.length}
         </Text>
       </Box>
@@ -166,54 +164,55 @@ function BrowserLayer({
   );
 }
 
-export const handleInput = createHandleInput([
+export const handleInput = createHandleInput<FilePickerModalState>([
   {
     when: isCancel,
     run: ({ context }) => context.closeModal(),
   },
   {
     when: props => isSourceLayer(props) && isSourceInput(props),
-    run: props =>
-      handleSourceInput(props.key, props.modal as Extract<FilePickerModalState, { layer: 'source' }>, props.context),
+    run: props => {
+      if (props.modal.layer !== 'source') return;
+      handleSourceInput(props.key, props.modal, props.context);
+    },
   },
   {
     when: props => isBrowserLayer(props) && isBrowserInput(props),
-    run: props =>
-      handleBrowserInput(props.key, props.modal as Extract<FilePickerModalState, { layer: 'browser' }>, props.context),
+    run: props => {
+      if (props.modal.layer !== 'browser') return;
+      handleBrowserInput(props.key, props.modal, props.context);
+    },
   },
   {
     when: props => isUrlLayer(props) && isUrlInput(props),
-    run: props =>
-      handleUrlInput(
-        props.input,
-        props.key,
-        props.modal as Extract<FilePickerModalState, { layer: 'url' }>,
-        props.context,
-      ),
+    run: props => {
+      if (props.modal.layer !== 'url') return;
+      handleUrlInput(props.input, props.key, props.modal, props.context);
+    },
   },
 ]);
 
-function isSourceLayer({ modal }: ModalInputProps) {
-  return (modal as FilePickerModalState).layer === 'source';
+function isSourceLayer({ modal }: ModalInputProps<FilePickerModalState>) {
+  return modal.layer === 'source';
 }
 
-function isBrowserLayer({ modal }: ModalInputProps) {
-  return (modal as FilePickerModalState).layer === 'browser';
+function isBrowserLayer({ modal }: ModalInputProps<FilePickerModalState>) {
+  return modal.layer === 'browser';
 }
 
-function isUrlLayer({ modal }: ModalInputProps) {
-  return (modal as FilePickerModalState).layer === 'url';
+function isUrlLayer({ modal }: ModalInputProps<FilePickerModalState>) {
+  return modal.layer === 'url';
 }
 
-function isSourceInput(props: ModalInputProps) {
+function isSourceInput(props: ModalInputProps<FilePickerModalState>) {
   return isSubmit(props) || props.key.upArrow || props.key.downArrow;
 }
 
-function isBrowserInput(props: ModalInputProps) {
+function isBrowserInput(props: ModalInputProps<FilePickerModalState>) {
   return isSubmit(props) || props.key.leftArrow || isBackspace(props) || props.key.upArrow || props.key.downArrow;
 }
 
-function isUrlInput(props: ModalInputProps) {
+function isUrlInput(props: ModalInputProps<FilePickerModalState>) {
   return (
     isSubmit(props) ||
     props.key.leftArrow ||
@@ -329,7 +328,7 @@ function selectEntry(state: Extract<FilePickerModalState, { layer: 'browser' }>,
     return;
   }
 
-  context.updateSettings({ material: entry.path });
+  context.updatePreferences({ material: { kind: 'file', path: entry.path } });
   context.closeModal();
 }
 
@@ -364,7 +363,7 @@ async function downloadUrlMaterial(state: Extract<FilePickerModalState, { layer:
 
   try {
     const target = await materialService.importUrl(state.url);
-    context.updateSettings({ material: target });
+    context.updatePreferences({ material: { kind: 'file', path: target } });
     context.closeModal();
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
@@ -382,9 +381,4 @@ function readDirectory(directory: string): FilePickerModalState {
     selected: 0,
     ...(result.error ? { error: result.error } : {}),
   };
-}
-
-function truncateError(message: string) {
-  const normalized = message.replace(/\s+/g, ' ').trim();
-  return normalized.length > 54 ? `${normalized.slice(0, 53)}…` : normalized;
 }

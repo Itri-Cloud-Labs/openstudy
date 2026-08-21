@@ -57,22 +57,22 @@ npm run reset:all -- --yes
 - `src/app` owns routes and composes the application's services and feature screens.
 - `src/domain` contains provider, material, preference, and study-session types. It has no React or filesystem code.
 - `src/features` groups home, setup, modal management, and study-session code by product feature.
-- `src/infrastructure` contains provider adapters, material I/O, and versioned persistence.
+- `src/infrastructure` contains material I/O and JSON persistence.
 - `src/shared` contains reusable Ink controls, terminal hooks, theme values, text helpers, and package metadata.
+- `src/providers` contains the single `StudyProvider` contract, one adapter per backend, provider metadata, and the factory map in `index.ts`. `prompt` resolves once with the final response text; there is no streaming.
 - `src/modals` contains modal state machines and the typed static registry. Manifests describe shortcuts and screen scope.
 - `src/commands` contains slash commands and their typed context.
-- `src/providers`, `src/session`, `src/components`, `src/types`, and `src/utils` are compatibility entry points. New implementation code belongs in the folders above.
 - `src/prompts` contains plain study-mode system prompts. Do not add schemas or runtime code there.
 - `tests` contains Node test-runner suites written in TypeScript.
 - `scripts` contains cross-platform maintenance and package checks.
 
 Domain modules import no UI or infrastructure code. Infrastructure imports domain contracts, not feature components. Feature code receives side-effecting services through the app layer or narrow compatibility functions. Shared code cannot import features.
 
-## Local data and migrations
+## Local data
 
-OpenStudy stores versioned JSON documents in `~/.openstudy`. Startup runs an idempotent migration for the old `config.json`, `session.json`, and UUID session directories. Reads never create files or change timestamps. Writes use a temporary file and same-directory rename.
+OpenStudy stores plain JSON documents in `~/.openstudy`: provider credentials in `config.json`, current preferences in `session.json`, and one directory per saved study session. Reads never create files or change timestamps. Writes use a temporary file and same-directory rename.
 
-Provider credentials live only in `config.json`. Saved sessions contain a snapshot of study preferences and mode results, never API keys. Keep migration tests when changing these formats. Deleting old readers without a release migration can lose user data.
+Provider credentials live only in `config.json`. Saved sessions contain a snapshot of study preferences and mode results, never API keys. Keep the normalization helpers in `src/domain` strict when changing these formats so corrupt or partial files degrade to defaults instead of crashing.
 
 ## Build and package invariants
 

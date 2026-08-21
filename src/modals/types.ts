@@ -1,25 +1,17 @@
 import type React from 'react';
 import type { useInput } from 'ink';
 import type { SubjectOption } from '../options/index.js';
-import type { Config, Provider, SessionSettings } from '../types/index.js';
+import type { ActiveProviderConfig, Provider } from '../domain/provider.js';
+import type { AppPreferences, StudySession } from '../domain/study.js';
 
 export interface SelectedModel {
   provider: Provider;
   name: string;
 }
 
-export type ModalId =
-  | 'devtools'
-  | 'filepicker'
-  | 'language'
-  | 'message'
-  | 'models'
-  | 'reasoning'
-  | 'sessions'
-  | 'subjects';
+export type ModalId = 'filepicker' | 'language' | 'message' | 'models' | 'reasoning' | 'sessions' | 'subjects';
 
 export interface ModalInitialStateMap {
-  devtools: undefined;
   filepicker: undefined;
   language: undefined;
   message: { title?: string; message?: string };
@@ -33,10 +25,8 @@ export type OpenModal = <Id extends ModalId>(id: Id, initialState?: ModalInitial
 
 export type ModalScreen = 'home' | 'session';
 
-export interface ModalState {
-  id: ModalId;
-  [key: string]: unknown;
-}
+/** Base constraint every modal state must satisfy; concrete states narrow `id`. */
+export type ModalState = { id: ModalId };
 
 export type ModalInputKey = Parameters<Parameters<typeof useInput>[0]>[1];
 
@@ -51,26 +41,24 @@ export interface ModalTrigger {
 }
 
 export interface ModalContext {
-  session: SessionSettings;
+  preferences: AppPreferences;
   activeSessionId: string | null;
-  config: Config | null;
+  config: ActiveProviderConfig | null;
   selectedSubject: SubjectOption | null;
   selectedModel: SelectedModel | null;
   openModal: OpenModal;
   closeModal: () => void;
-  updateModal: (updater: ModalState | ((current: ModalState) => ModalState)) => void;
-  updateSettings: (patch: Partial<SessionSettings>) => SessionSettings;
-  setSession: (sessionId: string) => SessionSettings | null;
+  updateModal: <S extends ModalState>(updater: S | ((current: S) => S)) => void;
+  updatePreferences: (patch: Partial<AppPreferences>) => AppPreferences;
+  saveProviderConfig: (config: ActiveProviderConfig) => void;
+  setSession: (sessionId: string) => StudySession | null;
 }
 
-export interface ModalModule {
-  open: (
-    context: ModalContext,
-    initialState?: Record<string, unknown>,
-  ) => ModalState | null | Promise<ModalState | null>;
-  getHeight: (modal: ModalState) => number;
-  render: (props: ModalRenderProps) => React.ReactNode;
-  handleInput?: (props: ModalInputProps) => boolean;
+export interface ModalModule<S extends ModalState = ModalState> {
+  open(context: ModalContext, initialState?: Record<string, unknown>): S | null | Promise<S | null>;
+  getHeight(modal: S): number;
+  render(props: ModalRenderProps<S>): React.ReactNode;
+  handleInput?(props: ModalInputProps<S>): boolean;
 }
 
 export interface ModalManifest<Id extends ModalId = ModalId> {
@@ -84,15 +72,15 @@ export interface ModalRenderContext extends ModalContext {
   isProviderConfigured: (provider: Provider) => boolean;
 }
 
-export interface ModalRenderProps {
-  modal: ModalState;
+export interface ModalRenderProps<S extends ModalState = ModalState> {
+  modal: S;
   context: ModalRenderContext;
 }
 
-export interface ModalInputProps {
+export interface ModalInputProps<S extends ModalState = ModalState> {
   input: string;
   key: ModalInputKey;
-  modal: ModalState;
+  modal: S;
   context: ModalRenderContext;
 }
 

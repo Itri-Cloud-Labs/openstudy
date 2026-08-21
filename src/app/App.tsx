@@ -1,22 +1,25 @@
 import React from 'react';
 import { Box, Text, useInput } from 'ink';
 import { loadCommands, type CommandContext, type CommandModule } from '../commands/index.js';
-import { LoadingScreen } from '../components/LoadingScreen.js';
-import { SetupScreen } from '../components/SetupScreen.js';
+import type { ActiveProviderConfig, Provider } from '../domain/provider.js';
+import { materialRefToLegacy } from '../domain/material.js';
+import type { AppPreferences, StudySession } from '../domain/study.js';
+import { useSessionSelection } from '../features/session-presentation.js';
 import { HomeScreen } from '../features/home/HomeScreen.js';
+import { SetupScreen } from '../features/setup/SetupScreen.js';
 import { SessionScreen } from '../features/study-session/SessionScreen.js';
-import { getHomeDirectory, getWorkingDirectory } from '../infrastructure/runtime/environment.js';
 import { useModalManager } from '../features/modals/useModalManager.js';
 import { loadModalManifests } from '../modals/registry.js';
 import type { ModalScreen, SelectedModel } from '../modals/types.js';
-import { subjects, type SubjectOption } from '../options/index.js';
-import { createProvider, getProviderDefinition } from '../providers/index.js';
+import type { SubjectOption } from '../options/index.js';
+import { createProvider, PROVIDER_METADATA } from '../providers/index.js';
 import { useTerminalSize } from '../shared/hooks/useTerminalSize.js';
-import { formatMaterialLabel, shortenHomePath } from '../shared/text.js';
+import { formatMaterialLabel } from '../shared/text.js';
+import { THEME } from '../shared/theme.js';
 import { useTerminalSurface } from '../shared/terminal/useTerminalSurface.js';
-import { PROVIDERS, type Provider, type SessionSettings } from '../types/index.js';
-import { loadSession, updateSettings } from '../utils/config.js';
-import { createSession, setSession as setSavedSession } from '../utils/index.js';
+import { LoadingScreen } from '../shared/ui/LoadingScreen.js';
+import { loadAppPreferences, loadConfig, saveConfig, updatePreferences } from '../utils/config.js';
+import { activateSession as activateSavedSession, createSession } from '../utils/sessions.js';
 import { isTerminalMouseReport } from '../utils/input.js';
 
 const MIN_LOADING_MS = 350;
@@ -106,47 +109,40 @@ interface StudyWorkspaceProps {
 function StudyWorkspace({ route, commands, inputDisabled, onExit, onRouteChange }: StudyWorkspaceProps) {
   useTerminalSurface();
   const terminal = useTerminalSize();
-  const [session, setSession] = React.useState<SessionSettings>(() => loadSession());
+  const [preferences, setPreferences] = React.useState<AppPreferences>(() => loadAppPreferences());
+  const [config, setConfig] = React.useState<ActiveProviderConfig | null>(() => loadConfig());
   const activeSessionId = route.screen === 'session' ? route.sessionId : null;
   const modalScreen: ModalScreen = route.screen === 'session' ? 'session' : 'home';
-  const selectedSubject = React.useMemo<SubjectOption | null>(
-    () =>
-      subjects.find(subject => subject.name === session.subject) ?? subjects.find(subject => subject.default) ?? null,
-    [session.subject],
-  );
-  const selectedModel = React.useMemo<SelectedModel | null>(
-    () => (session.modelProvider && session.model ? { provider: session.modelProvider, name: session.model } : null),
-    [session.model, session.modelProvider],
-  );
-  const config = React.useMemo(
-    () => (session.provider ? { provider: session.provider, apiKey: session.apiKey } : null),
-    [session.apiKey, session.provider],
-  );
+  const { selectedSubject, selectedModel, presentation } = useSessionSelection(preferences);
 
-  const updateSession = React.useCallback((patch: Partial<SessionSettings>) => {
-    const next = updateSettings(patch);
-    setSession(next);
+  const handleUpdatePreferences = React.useCallback((patch: Partial<AppPreferences>) => {
+    const next = updatePreferences(patch);
+    setPreferences(next);
     return next;
+  }, []);
+
+  const handleSaveProviderConfig = React.useCallback((next: ActiveProviderConfig) => {
+    saveConfig(next);
+    setConfig(next);
   }, []);
 
   const activateSession = React.useCallback(
     (sessionId: string) => {
-      const next = setSavedSession(sessionId);
-      if (!next) return null;
-      setSession(next);
+      const activated = activateSavedSession(sessionId);
+      if (!activated) return null;
       onRouteChange({
         screen: 'session',
-        sessionId: next.sessionId ?? sessionId,
-        prompt: getSessionPromptTitle(next),
+        sessionId,
+        prompt: getSessionPromptTitle(activated),
       });
-      return next;
+      return activated;
     },
     [onRouteChange],
   );
 
   const isProviderConfigured = React.useCallback(
     (provider: Provider) => {
-      const metadata = PROVIDERS.find(item => item.id === provider);
+      const metadata = PROVIDER_METADATA.find(item => item.id === provider);
       if (!metadata || config?.provider !== provider) return false;
       return !metadata.requiresKey || config.apiKey.trim().length > 0;
     },
@@ -155,12 +151,13 @@ function StudyWorkspace({ route, commands, inputDisabled, onExit, onRouteChange 
 
   const modalManager = useModalManager({
     screen: modalScreen,
-    session,
+    preferences,
     activeSessionId,
     config,
     selectedSubject,
     selectedModel,
-    updateSettings: updateSession,
+    updatePreferences: handleUpdatePreferences,
+    saveProviderConfig: handleSaveProviderConfig,
     setSession: activateSession,
     isProviderConfigured,
   });
@@ -194,26 +191,15 @@ function StudyWorkspace({ route, commands, inputDisabled, onExit, onRouteChange 
     [modalManager.close, modalManager.open, onExit, onRouteChange],
   );
 
-  const selectedModelLabel = selectedModel
-    ? `${getProviderDefinition(selectedModel.provider)?.label ?? selectedModel.provider}/${selectedModel.name}`
-    : 'Provider/Model';
-  const selectedProviderLabel = selectedModel
-    ? (getProviderDefinition(selectedModel.provider)?.label ?? selectedModel.provider)
-    : 'Provider';
-  const reasoningLabel = session.reasoningEffort ?? 'Default';
-  const materialLabel = formatMaterialLabel(session.material);
-  const languageLabel = session.studyLanguage ?? 'Study Language';
-  const cwd = shortenHomePath(getWorkingDirectory(), getHomeDirectory());
   const tip = React.useMemo(() => TIPS[Math.floor(Math.random() * TIPS.length)] ?? DEFAULT_TIP, []);
 
   const handleHomeSubmit = React.useCallback(
     (value: string) => {
-      if (!hasCompleteSessionOptions(session, selectedSubject, selectedModel)) return;
-      const created = createSession({ ...session, title: null, summaryText: null });
-      if (!created.sessionId) return;
-      onRouteChange({ screen: 'session', sessionId: created.sessionId, prompt: value.trim() });
+      if (!hasCompleteSessionOptions(preferences, selectedSubject, selectedModel)) return;
+      const created = createSession(preferences);
+      onRouteChange({ screen: 'session', sessionId: created.id, prompt: value.trim() });
     },
-    [onRouteChange, selectedModel, selectedSubject, session],
+    [onRouteChange, selectedModel, selectedSubject, preferences],
   );
 
   if (terminal.width < MIN_WIDTH || terminal.height < MIN_HEIGHT) {
@@ -230,17 +216,8 @@ function StudyWorkspace({ route, commands, inputDisabled, onExit, onRouteChange 
         termWidth={terminal.width}
         termHeight={terminal.height}
         prompt={route.prompt}
-        subject={selectedSubject?.name ?? 'Subject'}
-        subjectColor={selectedSubject?.color ?? '#3b82f6'}
-        modelProvider={selectedModel?.provider ?? null}
-        provider={selectedProviderLabel}
-        model={selectedModel?.name ?? selectedModelLabel}
-        reasoningEffort={reasoningLabel}
-        material={materialLabel}
-        materialPath={session.material ?? ''}
-        studyLanguage={languageLabel}
         sessionId={route.sessionId}
-        cwd={cwd}
+        presentation={presentation}
         commands={commands}
         commandContext={commandContext}
         inputActive={inputActive}
@@ -257,16 +234,7 @@ function StudyWorkspace({ route, commands, inputDisabled, onExit, onRouteChange 
       width={terminal.width}
       height={terminal.height}
       promptWidth={promptWidth}
-      presentation={{
-        subject: selectedSubject?.name ?? 'Subject',
-        subjectColor: selectedSubject?.color ?? '#3b82f6',
-        model: selectedModelLabel,
-        reasoningEffort: reasoningLabel,
-        material: materialLabel,
-        studyLanguage: languageLabel,
-        cwd,
-        tip,
-      }}
+      presentation={{ ...presentation, tip }}
       input={{
         commands,
         commandContext,
@@ -288,45 +256,45 @@ function TerminalTooSmall({ width, height }: { width: number; height: number }) 
       flexDirection="column"
       alignItems="center"
       justifyContent="center"
-      backgroundColor="#000000"
+      backgroundColor={THEME.background}
     >
-      <Text color="#f0a500" bold>
+      <Text color={THEME.primary} bold>
         Terminal too small
       </Text>
-      <Text color="#555555">
+      <Text color={THEME.textFaint}>
         {width}×{height}
         {'  '}
-        <Text color="#888888">minimum </Text>
+        <Text color={THEME.textMuted}>minimum </Text>
         {MIN_WIDTH}×{MIN_HEIGHT}
       </Text>
-      <Text color="#3d3d3d">Resize your terminal window to continue.</Text>
+      <Text color={THEME.textFaint}>Resize your terminal window to continue.</Text>
     </Box>
   );
 }
 
 function hasCompleteSessionOptions(
-  session: SessionSettings,
+  preferences: AppPreferences,
   selectedSubject: SubjectOption | null,
   selectedModel: SelectedModel | null,
 ): boolean {
   return Boolean(
     selectedSubject &&
       selectedModel &&
-      (!modelRequiresReasoning(selectedModel) || session.reasoningEffort) &&
-      session.material &&
-      session.studyLanguage,
+      (!modelRequiresReasoning(selectedModel) || preferences.reasoningEffort) &&
+      preferences.material &&
+      preferences.studyLanguage,
   );
 }
 
 function modelRequiresReasoning(selectedModel: SelectedModel): boolean {
   const provider = createProvider(selectedModel.provider);
-  const option = provider?.GetModels().find(model => model.model === selectedModel.name);
+  const option = provider?.getModels().find(model => model.model === selectedModel.name);
   return Boolean(option && option.reasoningLevels.length > 0);
 }
 
-function getSessionPromptTitle(session: SessionSettings): string {
+function getSessionPromptTitle(session: StudySession): string {
   const title = session.title?.trim();
   if (title) return title;
-  const material = formatMaterialLabel(session.material);
+  const material = formatMaterialLabel(materialRefToLegacy(session.preferences.material));
   return material === 'Material' ? 'Study Session' : material;
 }
