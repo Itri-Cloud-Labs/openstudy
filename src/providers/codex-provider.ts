@@ -13,6 +13,7 @@ export const CODEX_LOGIN_REQUIRED_MESSAGE = [
 const CLIENT_INFO = { name: 'openstudy', title: 'OpenStudy', version: APP_VERSION };
 const APPROVAL_POLICY = 'never';
 const SANDBOX_MODE = 'read-only';
+const CONNECT_TIMEOUT_MS = 15_000;
 
 const REASONING_EFFORT_LABELS: Record<string, string> = {
   none: 'None',
@@ -52,6 +53,7 @@ interface CodexTurnResponse {
 }
 
 interface CodexTurnCompletedTurn {
+  id?: string;
   status?: string;
   error?: { message?: string } | null;
   items?: Array<{ type?: string; text?: string }>;
@@ -92,10 +94,14 @@ async function connect(): Promise<CodexAppServer> {
     connectPromise = null;
   });
   try {
-    await instance.request('initialize', {
-      clientInfo: CLIENT_INFO,
-      capabilities: { experimentalApi: true },
-    });
+    await withRequestTimeout(
+      instance.request('initialize', {
+        clientInfo: CLIENT_INFO,
+        capabilities: { experimentalApi: true },
+      }),
+      CONNECT_TIMEOUT_MS,
+      'The Codex app-server did not respond to initialization in time.',
+    );
     instance.notify('initialized');
     return instance;
   } catch (error) {
@@ -105,7 +111,11 @@ async function connect(): Promise<CodexAppServer> {
 }
 
 async function readAccount(instance: CodexAppServer, signal?: AbortSignal): Promise<void> {
-  const response = (await instance.request('account/read', {}, signal)) as CodexAccountResponse;
+  const response = (await withRequestTimeout(
+    instance.request('account/read', {}, signal),
+    CONNECT_TIMEOUT_MS,
+    'The Codex app-server did not respond to the account check in time.',
+  )) as CodexAccountResponse;
   if (!response.account && response.requiresOpenaiAuth) throw new Error(CODEX_LOGIN_REQUIRED_MESSAGE);
 }
 
@@ -115,7 +125,11 @@ async function refreshModels(instance: CodexAppServer, signal?: AbortSignal): Pr
   let cursor: string | null = null;
 
   do {
-    const response = (await instance.request('model/list', cursor ? { cursor } : {}, signal)) as CodexModelListResponse;
+    const response = (await withRequestTimeout(
+      instance.request('model/list', cursor ? { cursor } : {}, signal),
+      CONNECT_TIMEOUT_MS,
+      'The Codex app-server did not respond to the model listing in time.',
+    )) as CodexModelListResponse;
 
     for (const model of response.data ?? []) {
       if (!model.model || model.hidden === true) continue;
@@ -152,6 +166,22 @@ function toDisplayName(slug: string, model: CodexCatalogModel): string {
 
 function reasoningEffortLabel(effort: string): string {
   return REASONING_EFFORT_LABELS[effort] ?? effort;
+}
+
+export function withRequestTimeout<T>(promise: Promise<T>, timeoutMs: number, message: string): Promise<T> {
+  return new Promise<T>((resolve, reject) => {
+    const timer = setTimeout(() => reject(new Error(message)), timeoutMs);
+    promise.then(
+      value => {
+        clearTimeout(timer);
+        resolve(value);
+      },
+      error => {
+        clearTimeout(timer);
+        reject(error instanceof Error ? error : new Error(String(error)));
+      },
+    );
+  });
 }
 
 function resolveModel(options: ProviderPromptOptions): string | null {
@@ -232,17 +262,27 @@ function runTurn(
     const fail = (error: unknown) =>
       finish(() => reject(error instanceof Error ? error : new Error('The Codex turn failed unexpectedly.')));
 
+    // Before turn/start resolves we cannot tell turns apart, so notifications
+    // without a usable turn id are accepted; afterwards, foreign-turn traffic
+    // (for example stragglers from an interrupted turn on a resumed thread)
+    // must not leak into this waiter.
+    function belongsToCurrentTurn(candidate: unknown): boolean {
+      if (turnId === null) return true;
+      return typeof candidate !== 'string' || candidate.length === 0 || candidate === turnId;
+    }
+
     function onNotification(notification: CodexAppServerNotification): void {
       const params = notification.params as Record<string, unknown> | undefined;
       if (!params || params.threadId !== threadId) return;
 
       if (notification.method === 'item/agentMessage/delta') {
-        if (typeof params.delta === 'string') deltas.push(params.delta);
+        if (typeof params.delta === 'string' && belongsToCurrentTurn(params.turnId)) deltas.push(params.delta);
         return;
       }
 
       if (notification.method === 'turn/completed') {
         const turn = params.turn as CodexTurnCompletedTurn | undefined;
+        if (!belongsToCurrentTurn(turn?.id)) return;
         const errorMessage = turn?.error?.message?.trim();
         if (errorMessage) {
           fail(new Error(errorMessage));
@@ -260,7 +300,7 @@ function runTurn(
       }
 
       if (notification.method === 'error') {
-        if (params.willRetry === true) return;
+        if (params.willRetry === true || !belongsToCurrentTurn(params.turnId)) return;
         const message =
           typeof (params.error as { message?: unknown } | undefined)?.message === 'string'
             ? (params.error as { message: string }).message

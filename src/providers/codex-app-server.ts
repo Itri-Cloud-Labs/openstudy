@@ -43,16 +43,16 @@ export class CodexAppServer {
   private readonly closeListeners = new Set<CloseListener>();
   private stderrTail = '';
 
-  static spawn(): CodexAppServer {
+  static spawn(binary = CODEX_BINARY, args: string[] = ['app-server']): CodexAppServer {
     const client = new CodexAppServer();
-    client.start();
+    client.start(binary, args);
     return client;
   }
 
-  private start(): void {
+  private start(binary: string, args: string[]): void {
     let child: ChildProcess;
     try {
-      child = spawn(CODEX_BINARY, ['app-server'], { stdio: ['pipe', 'pipe', 'pipe'] });
+      child = spawn(binary, args, { stdio: ['pipe', 'pipe', 'pipe'] });
     } catch {
       throw new Error(SPAWN_FAILED_MESSAGE);
     }
@@ -68,6 +68,7 @@ export class CodexAppServer {
       this.failAll(error.code === 'ENOENT' ? new Error(SPAWN_FAILED_MESSAGE) : new Error(error.message));
     });
     child.on('close', exitCode => {
+      this.child = null;
       this.failAll(
         new Error(
           `The Codex app-server exited unexpectedly (code ${exitCode ?? 'unknown'}).${this.stderrTail.trim() ? ` Last output: ${this.stderrTail.trim()}` : ''}`,
@@ -99,22 +100,31 @@ export class CodexAppServer {
   request(method: string, params?: unknown, signal?: AbortSignal): Promise<unknown> {
     throwIfAborted(signal);
     const id = this.nextRequestId++;
+    const abortSignal = signal;
     return new Promise((resolve, reject) => {
-      const pending: PendingRequest = { method, resolve, reject };
-      this.pending.set(id, pending);
-      if (!this.write({ id, method, ...(params === undefined ? {} : { params }) })) {
+      let settled = false;
+      const settle = (fn: (value: unknown) => void, value: unknown) => {
+        if (settled) return;
+        settled = true;
         this.pending.delete(id);
-        return reject(new Error('The Codex app-server connection is not available.'));
+        signal?.removeEventListener('abort', onAbort);
+        fn(value);
+      };
+      const pending: PendingRequest = {
+        method,
+        resolve: value => settle(resolve, value),
+        reject: error => settle(reject, error),
+      };
+      const onAbort = () => {
+        this.pending.delete(id);
+        pending.reject(createProviderAbortError(abortSignal?.reason));
+      };
+
+      this.pending.set(id, pending);
+      signal?.addEventListener('abort', onAbort, { once: true });
+      if (!this.write({ id, method, ...(params === undefined ? {} : { params }) })) {
+        pending.reject(new Error('The Codex app-server connection is not available.'));
       }
-      signal?.addEventListener(
-        'abort',
-        () => {
-          if (!this.pending.has(id)) return;
-          this.pending.delete(id);
-          reject(createProviderAbortError(signal.reason));
-        },
-        { once: true },
-      );
     });
   }
 

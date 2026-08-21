@@ -1,11 +1,16 @@
 import net from 'node:net';
-import { createOpencode } from '@opencode-ai/sdk/v2';
+import { createOpencodeClient, createOpencodeServer, type OpencodeClient } from '@opencode-ai/sdk/v2';
 import type { ProviderListResponse } from '@opencode-ai/sdk/v2';
 import type { ProviderModelOption, ProviderPromptOptions, ProviderPromptResult, StudyProvider } from './contracts.js';
 import { createProviderAbortError, normalizeProviderError, throwIfProviderAborted } from './errors.js';
 import { buildMaterialPrompt, resolvePromptFiles } from './material-prompt.js';
 
-type OpenCodeInstance = Awaited<ReturnType<typeof createOpencode>>;
+type OpenCodeServer = Awaited<ReturnType<typeof createOpencodeServer>>;
+
+interface OpenCodeInstance {
+  client: OpencodeClient;
+  server: OpenCodeServer;
+}
 
 const OPENCODE_CONFIG = {
   compaction: { auto: false },
@@ -57,7 +62,11 @@ async function getOrCreateOpencode(signal?: AbortSignal): Promise<OpenCodeInstan
     initPromise = (async (): Promise<OpenCodeInstance> => {
       const port = await findFreePort();
       throwIfProviderAborted(signal);
-      return createOpencode({ port, config: OPENCODE_CONFIG });
+      const server = await createOpencodeServer({ hostname: '127.0.0.1', port, config: OPENCODE_CONFIG });
+      // throwOnError makes HTTP failures throw instead of returning an empty
+      // payload, so provider and session errors surface with their real cause.
+      const client = createOpencodeClient({ baseUrl: server.url, throwOnError: true });
+      return { client, server };
     })()
       .then(created => {
         instance = created;
@@ -97,7 +106,12 @@ export class OpenCodeProvider implements StudyProvider<'opencode'> {
       cachedModels = options;
     } catch (error) {
       if (signal?.aborted) throw createProviderAbortError(signal.reason);
-      if (error instanceof Error && error.message === OPENCODE_NO_PROVIDERS_MESSAGE) throw error;
+      if (
+        error instanceof Error &&
+        (error.message === OPENCODE_NO_PROVIDERS_MESSAGE || error.message === OPENCODE_LOGIN_REQUIRED_MESSAGE)
+      ) {
+        throw error;
+      }
       throw new Error(OPENCODE_LOGIN_REQUIRED_MESSAGE, { cause: error });
     }
   }
