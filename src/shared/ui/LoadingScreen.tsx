@@ -2,6 +2,7 @@ import React from 'react';
 import { Box, Text } from 'ink';
 import { Logo } from './Logo.js';
 import { useTerminalSize } from '../hooks/useTerminalSize.js';
+import { THEME } from '../theme.js';
 
 const LOADING_FRAMES = ['|', '/', '-', '\\'];
 const TROLL_MESSAGES = [
@@ -50,15 +51,15 @@ export const LoadingScreen: React.FC<LoadingScreenProps> = ({ firstLaunch = fals
       flexDirection="column"
       alignItems="center"
       justifyContent="center"
-      backgroundColor="#000000"
+      backgroundColor={THEME.background}
     >
       <Box marginBottom={2}>
         <Logo />
       </Box>
-      <Text color="#f0a500" bold>
+      <Text color={THEME.primary} bold>
         {LOADING_FRAMES[frame]} Loading OpenStudy
       </Text>
-      <Text color="#555555">
+      <Text color={THEME.textFaint}>
         {firstLaunch && preloadReady ? TROLL_MESSAGES[messageIndex] : 'Preparing commands and modals...'}
       </Text>
     </Box>

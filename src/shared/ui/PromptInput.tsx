@@ -3,8 +3,10 @@ import { Box, Text, useInput } from 'ink';
 import type { CommandContext, CommandModule } from '../../commands/index.js';
 import type { ModalTrigger } from '../../modals/index.js';
 import { useBlinkCursor } from '../hooks/useBlinkCursor.js';
+import { truncate } from '../text.js';
 import { isTerminalMouseReport } from '../../utils/input.js';
 import { getCommandSuggestions, wrapInput } from './prompt-model.js';
+import { THEME } from '../theme.js';
 
 const ACCENT_WIDTH = 1;
 const INPUT_PADDING_X = 2;
@@ -207,12 +209,6 @@ export const PromptInput: React.FC<PromptInputProps> = ({
   const cursor = cursorVisible ? '█' : ' ';
   const placeholderCursor = cursorVisible ? cursor : (placeholder[0] ?? ' ');
 
-  const truncate = React.useCallback((text: string, maxLength: number) => {
-    if (text.length <= maxLength) return text;
-    if (maxLength <= 1) return '…'.slice(0, maxLength);
-    return `${text.slice(0, maxLength - 1)}…`;
-  }, []);
-
   return (
     <Box flexDirection="column" width={width}>
       {menuVisible && (
@@ -225,19 +221,19 @@ export const PromptInput: React.FC<PromptInputProps> = ({
           borderStyle="single"
           borderTop={false}
           borderBottom={false}
-          borderColor="#303036"
-          backgroundColor="#101014"
+          borderColor={THEME.rule}
+          backgroundColor={THEME.backgroundPanel}
           overflow="hidden"
         >
           {menuItems.length === 0 ? (
             <Box paddingX={1} width="100%">
-              <Text color="#777777">No matching commands</Text>
+              <Text color={THEME.textMuted}>No matching commands</Text>
             </Box>
           ) : (
             menuItems.map((suggestion, index) => {
               const isSelected = index === selectedIndex;
               const remaining = Math.max(0, menuInnerWidth - commandWidth);
-              const description = truncate(suggestion.config.description, remaining);
+              const description = truncate(suggestion.config.description, remaining, '…');
 
               return (
                 <Box
@@ -246,10 +242,10 @@ export const PromptInput: React.FC<PromptInputProps> = ({
                   width="100%"
                   backgroundColor={isSelected ? subjectColor : undefined}
                 >
-                  <Text color={isSelected ? '#000000' : '#f0f0f0'} bold={isSelected}>
+                  <Text color={isSelected ? THEME.onAccent : THEME.text} bold={isSelected}>
                     {`/${suggestion.config.name}`.padEnd(commandWidth)}
                   </Text>
-                  <Text color={isSelected ? '#000000' : '#777777'}>{description}</Text>
+                  <Text color={isSelected ? THEME.onAccent : THEME.textMuted}>{description}</Text>
                 </Box>
               );
             })
@@ -257,15 +253,15 @@ export const PromptInput: React.FC<PromptInputProps> = ({
         </Box>
       )}
 
-      <Box flexDirection="row" width={width} backgroundColor="#1f1f23">
+      <Box flexDirection="row" width={width} backgroundColor={THEME.backgroundRaised}>
         <Box width={ACCENT_WIDTH} backgroundColor={subjectColor} />
 
         <Box flexDirection="column" flexGrow={1} paddingX={INPUT_PADDING_X} paddingY={1}>
           <Box marginBottom={1} minHeight={MIN_INPUT_LINES} flexDirection="column">
             {isPlaceholder ? (
               <Text>
-                <Text color={cursorVisible ? '#f0f0f0' : '#b0b0b6'}>{placeholderCursor}</Text>
-                <Text color="#b0b0b6">{placeholder.slice(1)}</Text>
+                <Text color={cursorVisible ? THEME.text : THEME.textMuted}>{placeholderCursor}</Text>
+                <Text color={THEME.textMuted}>{placeholder.slice(1)}</Text>
               </Text>
             ) : (
               visibleLines.map((line, index) => {
@@ -273,8 +269,8 @@ export const PromptInput: React.FC<PromptInputProps> = ({
 
                 return (
                   <Text key={`${index}:${line}`}>
-                    <Text color="#f0f0f0">{line}</Text>
-                    {isLastLine && <Text color="#f0f0f0">{cursor}</Text>}
+                    <Text color={THEME.text}>{line}</Text>
+                    {isLastLine && <Text color={THEME.text}>{cursor}</Text>}
                   </Text>
                 );
               })
@@ -286,16 +282,16 @@ export const PromptInput: React.FC<PromptInputProps> = ({
               <Text color={subjectColor} bold>
                 {subject}
               </Text>
-              <Text color="#3a3a3a"> · </Text>
-              <Text color="#888888">{model}</Text>
-              <Text color="#3a3a3a"> · </Text>
-              <Text color="#f0a500" bold>
+              <Text color={THEME.rule}> · </Text>
+              <Text color={THEME.textMuted}>{model}</Text>
+              <Text color={THEME.rule}> · </Text>
+              <Text color={THEME.primary} bold>
                 {reasoningEffort}
               </Text>
-              <Text color="#3a3a3a"> · </Text>
-              <Text color="#888888">{material}</Text>
-              <Text color="#3a3a3a"> · </Text>
-              <Text color="#888888">{studyLanguage}</Text>
+              <Text color={THEME.rule}> · </Text>
+              <Text color={THEME.textMuted}>{material}</Text>
+              <Text color={THEME.rule}> · </Text>
+              <Text color={THEME.textMuted}>{studyLanguage}</Text>
             </Box>
           )}
         </Box>

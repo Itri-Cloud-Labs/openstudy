@@ -6,9 +6,11 @@ import {
   type ProviderModelOption,
 } from '../providers/index.js';
 import type { Provider } from '../domain/provider.js';
+import { truncateError } from '../shared/text.js';
 import { focusTextColor } from '../utils/index.js';
 import { createHandleInput, isBackspace, isCancel, isPlainTextInput, isSubmit } from './input.js';
 import type { ModalContext, ModalInputProps, ModalRenderContext, ModalRenderProps, ModalState } from './types.js';
+import { THEME } from '../shared/theme.js';
 
 const MODEL_MODAL_MAX_ROWS = 6;
 const SPINNER_FRAMES = ['|', '/', '-', '\\'];
@@ -144,17 +146,17 @@ function ProviderLayer({
   return (
     <>
       <Box justifyContent="space-between" marginBottom={1}>
-        <Text color="#f0f0f0" bold>
+        <Text color={THEME.text} bold>
           Select Provider
         </Text>
-        <Text color="#777777">esc</Text>
+        <Text color={THEME.textMuted}>esc</Text>
       </Box>
       <Box marginBottom={1}>
-        <Text color="#777777">Choose a provider before selecting a model.</Text>
+        <Text color={THEME.textMuted}>Choose a provider before selecting a model.</Text>
       </Box>
       <Box flexDirection="column" marginBottom={1}>
         {providers.length === 0 ? (
-          <Text color="#777777">No providers available</Text>
+          <Text color={THEME.textMuted}>No providers available</Text>
         ) : (
           providers.map((provider, index) => {
             const isSelected = modal.selected === index;
@@ -174,7 +176,7 @@ function ProviderLayer({
                 backgroundColor={isSelected ? subjectColor : undefined}
                 justifyContent="space-between"
               >
-                <Text color={isSelected ? '#000000' : '#f0f0f0'} bold={isSelected}>
+                <Text color={isSelected ? THEME.onAccent : THEME.text} bold={isSelected}>
                   {provider.label}
                 </Text>
                 <Text color={focusTextColor(getProviderStatusColor(status), subjectColor, isSelected)} bold>
@@ -186,10 +188,10 @@ function ProviderLayer({
         )}
       </Box>
       <Box justifyContent="space-between">
-        <Text color={modal.error ? '#ef4444' : '#777777'}>
+        <Text color={modal.error ? THEME.danger : THEME.textMuted}>
           {modal.error ? truncateError(modal.error) : providers.length === 0 ? 'providers unavailable' : '↑↓ move'}
         </Text>
-        <Text color="#777777">enter continue</Text>
+        <Text color={THEME.textMuted}>enter continue</Text>
       </Box>
     </>
   );
@@ -208,24 +210,24 @@ function SubProvidersLayer({
   return (
     <>
       <Box justifyContent="space-between" marginBottom={1}>
-        <Text color="#f0f0f0" bold>
+        <Text color={THEME.text} bold>
           {getProviderLabel(modal.provider)}
         </Text>
-        <Text color="#777777">esc</Text>
+        <Text color={THEME.textMuted}>esc</Text>
       </Box>
       <Box marginBottom={1}>
-        <Text color="#777777">Select a subprovider.</Text>
+        <Text color={THEME.textMuted}>Select a subprovider.</Text>
       </Box>
       <Box flexDirection="column" marginBottom={1}>
         {visibleSubProviders.length === 0 ? (
-          <Text color="#777777">No providers available</Text>
+          <Text color={THEME.textMuted}>No providers available</Text>
         ) : (
           visibleSubProviders.map((sp, index) => {
             const spIndex = windowStart + index;
             const isSelected = modal.selected === spIndex;
             return (
               <Box key={sp.id} backgroundColor={isSelected ? subjectColor : undefined}>
-                <Text color={isSelected ? '#000000' : '#f0f0f0'} bold={isSelected}>
+                <Text color={isSelected ? THEME.onAccent : THEME.text} bold={isSelected}>
                   {sp.name}
                 </Text>
               </Box>
@@ -234,8 +236,8 @@ function SubProvidersLayer({
         )}
       </Box>
       <Box justifyContent="space-between">
-        <Text color="#777777">← back ↑↓ move</Text>
-        <Text color="#777777">enter continue</Text>
+        <Text color={THEME.textMuted}>← back ↑↓ move</Text>
+        <Text color={THEME.textMuted}>enter continue</Text>
       </Box>
     </>
   );
@@ -254,13 +256,13 @@ function ModelsLayer({ modal, context }: ModalRenderProps & { modal: Extract<Mod
   return (
     <>
       <Box justifyContent="space-between" marginBottom={1}>
-        <Text color="#f0f0f0" bold>
+        <Text color={THEME.text} bold>
           {getProviderLabel(modal.provider)}
         </Text>
-        <Text color="#777777">esc</Text>
+        <Text color={THEME.textMuted}>esc</Text>
       </Box>
       <Box marginBottom={1}>
-        <Text color="#777777">Select a model.</Text>
+        <Text color={THEME.textMuted}>Select a model.</Text>
       </Box>
       <Box flexDirection="column" marginBottom={1}>
         {visibleModels.map((modelOption, index) => {
@@ -275,20 +277,20 @@ function ModelsLayer({ modal, context }: ModalRenderProps & { modal: Extract<Mod
               backgroundColor={isSelected ? subjectColor : undefined}
               justifyContent="space-between"
             >
-              <Text color={isSelected ? '#000000' : '#f0f0f0'} bold={isSelected}>
+              <Text color={isSelected ? THEME.onAccent : THEME.text} bold={isSelected}>
                 {modelOption.label}
               </Text>
-              {isCurrent && <Text color={focusTextColor('#22c55e', subjectColor, isSelected)}>current</Text>}
+              {isCurrent && <Text color={focusTextColor(THEME.success, subjectColor, isSelected)}>current</Text>}
             </Box>
           );
         })}
       </Box>
       <Box justifyContent="space-between">
-        <Text color="#777777">
+        <Text color={THEME.textMuted}>
           {modal.subProvider ? '← back' : '← providers'} {modelWindowStart + 1}-
           {modelWindowStart + visibleModels.length}/{modelOptions.length}
         </Text>
-        <Text color="#777777">enter select</Text>
+        <Text color={THEME.textMuted}>enter select</Text>
       </Box>
     </>
   );
@@ -298,23 +300,23 @@ function SetupLayer({ modal, context }: ModalRenderProps & { modal: Extract<Mode
   return (
     <>
       <Box justifyContent="space-between" marginBottom={1}>
-        <Text color="#f0f0f0" bold>
+        <Text color={THEME.text} bold>
           Set Up {getProviderLabel(modal.provider)}
         </Text>
-        <Text color="#777777">esc</Text>
+        <Text color={THEME.textMuted}>esc</Text>
       </Box>
       <Box marginBottom={1}>
-        <Text color="#777777">Enter API key to unlock this provider.</Text>
+        <Text color={THEME.textMuted}>Enter API key to unlock this provider.</Text>
       </Box>
-      <Box backgroundColor="#1f1f23" paddingX={1} marginBottom={1}>
-        <Text color={modal.apiKey ? '#f0f0f0' : '#777777'}>
+      <Box backgroundColor={THEME.backgroundRaised} paddingX={1} marginBottom={1}>
+        <Text color={modal.apiKey ? THEME.text : THEME.textMuted}>
           {modal.apiKey ? '*'.repeat(modal.apiKey.length) : 'API key'}
         </Text>
         <Text color={context.selectedSubject?.color ?? '#3b82f6'}>█</Text>
       </Box>
       <Box justifyContent="space-between">
-        <Text color={modal.error ? '#ef4444' : '#777777'}>{modal.error ?? '← providers'}</Text>
-        <Text color="#777777">enter save</Text>
+        <Text color={modal.error ? THEME.danger : THEME.textMuted}>{modal.error ?? '← providers'}</Text>
+        <Text color={THEME.textMuted}>enter save</Text>
       </Box>
     </>
   );
@@ -754,9 +756,9 @@ function getAuthStatus(auth: ProviderAuthById, provider: Provider): ProviderAuth
 }
 
 function getProviderStatusColor(status: 'checking' | 'ready' | 'setup' | 'login') {
-  if (status === 'ready') return '#22c55e';
-  if (status === 'login') return '#ef4444';
-  return '#f0a500';
+  if (status === 'ready') return THEME.success;
+  if (status === 'login') return THEME.danger;
+  return THEME.primary;
 }
 
 function createCheckingAuth(providers: ModelProviderDefinition[]): ProviderAuthById {
@@ -796,11 +798,6 @@ function updateMatchingAuthState(
   if (state.id !== 'models' || state.authCheckId !== authCheckId) return current;
 
   return { ...current, ...patch };
-}
-
-function truncateError(message: string) {
-  const normalized = message.replace(/\s+/g, ' ').trim();
-  return normalized.length > 54 ? `${normalized.slice(0, 53)}…` : normalized;
 }
 
 function getDefaultReasoningLevel(modelOption: ProviderModelOption) {

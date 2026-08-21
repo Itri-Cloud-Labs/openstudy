@@ -5,7 +5,7 @@ import {
   studySessionFromSettings,
   type StudySession,
 } from '../domain/index.js';
-import type { SessionSettings } from '../types/index.js';
+import type { SessionSettings } from '../domain/study.js';
 import { CONFIG_DIR, DEFAULT_SESSION, getPersistence, loadSession, saveSession } from './config.js';
 
 const SESSION_FILENAME = 'session.json';

@@ -5,15 +5,10 @@ import { PromptInput } from '../../shared/ui/PromptInput.js';
 import { ModalHost } from '../../modals/ModalHost.js';
 import type { ActiveModal, ModalRenderContext, ModalTrigger } from '../../modals/types.js';
 import { APP_VERSION } from '../../shared/metadata.js';
+import { THEME } from '../../shared/theme.js';
+import type { SessionPresentation } from '../session-presentation.js';
 
-export interface HomePresentation {
-  subject: string;
-  subjectColor: string;
-  model: string;
-  reasoningEffort: string;
-  material: string;
-  studyLanguage: string;
-  cwd: string;
+export interface HomePresentation extends SessionPresentation {
   tip: string;
 }
 
@@ -45,7 +40,7 @@ export function HomeScreen({ width, height, promptWidth, presentation, input, ov
   const topPadding = Math.max(2, Math.floor((height - contentHeight) / 2));
 
   return (
-    <Box flexDirection="column" width={width} height={height} backgroundColor="#000000">
+    <Box flexDirection="column" width={width} height={height} backgroundColor={THEME.background}>
       <Box height={topPadding} flexShrink={0} />
 
       <Box justifyContent="center" marginBottom={2}>
@@ -61,10 +56,10 @@ export function HomeScreen({ width, height, promptWidth, presentation, input, ov
           inputActive={input.active}
           modalTriggers={input.triggers}
           onModalTrigger={input.onTrigger}
-          placeholder={`Not sure what to ask ? Just say Hi and ${presentation.model} will guide you`}
+          placeholder={`Not sure what to ask ? Just say Hi and ${presentation.modelLabel} will guide you`}
           subject={presentation.subject}
           subjectColor={presentation.subjectColor}
-          model={presentation.model}
+          model={presentation.modelLabel}
           reasoningEffort={presentation.reasoningEffort}
           material={presentation.material}
           studyLanguage={presentation.studyLanguage}
@@ -74,35 +69,35 @@ export function HomeScreen({ width, height, promptWidth, presentation, input, ov
       <Box justifyContent="center" marginTop={1}>
         <Box width={promptWidth} justifyContent="flex-end">
           <Text dimColor>
-            <Text color="#cccccc">tab</Text>
-            <Text color="#555555"> subject </Text>
-            <Text color="#cccccc">ctrl+m</Text>
-            <Text color="#555555"> model </Text>
-            <Text color="#cccccc">ctrl+r</Text>
-            <Text color="#555555"> reasoning </Text>
-            <Text color="#cccccc">ctrl+f</Text>
-            <Text color="#555555"> material </Text>
-            <Text color="#cccccc">ctrl+l</Text>
-            <Text color="#555555"> language</Text>
+            <Text color={THEME.text}>tab</Text>
+            <Text color={THEME.textFaint}> subject </Text>
+            <Text color={THEME.text}>ctrl+m</Text>
+            <Text color={THEME.textFaint}> model </Text>
+            <Text color={THEME.text}>ctrl+r</Text>
+            <Text color={THEME.textFaint}> reasoning </Text>
+            <Text color={THEME.text}>ctrl+f</Text>
+            <Text color={THEME.textFaint}> material </Text>
+            <Text color={THEME.text}>ctrl+l</Text>
+            <Text color={THEME.textFaint}> language</Text>
           </Text>
         </Box>
       </Box>
 
       <Box justifyContent="center" marginTop={2}>
         <Box width={promptWidth}>
-          <Text color="#f0a500">{'● '}</Text>
-          <Text color="#f0a500" bold>
+          <Text color={THEME.primary}>{'● '}</Text>
+          <Text color={THEME.primary} bold>
             Tip
           </Text>
-          <Text color="#555555">{` ${presentation.tip}`}</Text>
+          <Text color={THEME.textFaint}>{` ${presentation.tip}`}</Text>
         </Box>
       </Box>
 
       <Box flexGrow={1} />
 
       <Box flexDirection="row" justifyContent="space-between" paddingX={2}>
-        <Text color="#444444">{presentation.cwd}</Text>
-        <Text color="#444444">{APP_VERSION}</Text>
+        <Text color={THEME.textFaint}>{presentation.cwd}</Text>
+        <Text color={THEME.textFaint}>{APP_VERSION}</Text>
       </Box>
 
       {overlay.modal && (

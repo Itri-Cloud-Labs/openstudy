@@ -1,6 +1,7 @@
 import type React from 'react';
 import { Box } from 'ink';
 import type { ActiveModal, ModalRenderContext } from './types.js';
+import { THEME } from '../shared/theme.js';
 
 interface ModalHostProps {
   modal: ActiveModal;
@@ -21,8 +22,8 @@ export const ModalHost: React.FC<ModalHostProps> = ({ modal, termWidth, termHeig
         width={width}
         flexDirection="column"
         borderStyle="single"
-        borderColor="#303036"
-        backgroundColor="#101014"
+        borderColor={THEME.rule}
+        backgroundColor={THEME.backgroundPanel}
         paddingX={2}
         paddingY={1}
       >

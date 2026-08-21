@@ -1,6 +1,7 @@
 import { Box, Text } from 'ink';
 import { createHandleInput, isBackspace, isCancel, isPlainTextInput, isSubmit } from './input.js';
 import type { ModalContext, ModalInputProps, ModalRenderProps, ModalState } from './types.js';
+import { THEME } from '../shared/theme.js';
 
 const LANGUAGE_MODAL_MAX_ROWS = 8;
 
@@ -53,19 +54,19 @@ export function render({ modal, context }: ModalRenderProps) {
   return (
     <>
       <Box justifyContent="space-between" marginBottom={1}>
-        <Text color="#f0f0f0" bold>
+        <Text color={THEME.text} bold>
           Select Language
         </Text>
-        <Text color="#777777">esc</Text>
+        <Text color={THEME.textMuted}>esc</Text>
       </Box>
       <Box marginBottom={1}>
-        <Text color="#777777">Search </Text>
-        <Text color="#f0f0f0">{state.filter}</Text>
+        <Text color={THEME.textMuted}>Search </Text>
+        <Text color={THEME.text}>{state.filter}</Text>
         <Text color={subjectColor}>█</Text>
       </Box>
       <Box flexDirection="column" marginBottom={1}>
         {filteredLanguages.length === 0 ? (
-          <Text color="#777777">No languages found</Text>
+          <Text color={THEME.textMuted}>No languages found</Text>
         ) : (
           visibleLanguages.map((language, index) => {
             const languageIndex = windowStart + index;
@@ -78,20 +79,20 @@ export function render({ modal, context }: ModalRenderProps) {
                 backgroundColor={isSelected ? subjectColor : undefined}
                 justifyContent="space-between"
               >
-                <Text color={isSelected ? '#000000' : '#f0f0f0'} bold={isSelected}>
+                <Text color={isSelected ? THEME.onAccent : THEME.text} bold={isSelected}>
                   {language}
                 </Text>
-                {isCurrent && <Text color={isSelected ? '#000000' : '#22c55e'}>current</Text>}
+                {isCurrent && <Text color={isSelected ? THEME.onAccent : THEME.success}>current</Text>}
               </Box>
             );
           })
         )}
       </Box>
       <Box justifyContent="space-between">
-        <Text color="#777777">
+        <Text color={THEME.textMuted}>
           ↑↓ move {windowStart + 1}-{windowStart + visibleLanguages.length}/{filteredLanguages.length}
         </Text>
-        <Text color="#777777">enter select</Text>
+        <Text color={THEME.textMuted}>enter select</Text>
       </Box>
     </>
   );

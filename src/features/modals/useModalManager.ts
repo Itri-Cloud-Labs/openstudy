@@ -13,13 +13,14 @@ import type {
   SelectedModel,
 } from '../../modals/types.js';
 import type { SubjectOption } from '../../options/index.js';
-import type { Config, Provider, SessionSettings } from '../../types/index.js';
+import type { ActiveProviderConfig, Provider } from '../../domain/provider.js';
+import type { SessionSettings } from '../../domain/study.js';
 
 export interface ModalManagerOptions {
   screen: ModalScreen;
   session: SessionSettings;
   activeSessionId: string | null;
-  config: Config | null;
+  config: ActiveProviderConfig | null;
   selectedSubject: SubjectOption | null;
   selectedModel: SelectedModel | null;
   updateSettings: (patch: Partial<SessionSettings>) => SessionSettings;
@@ -77,9 +78,24 @@ export function useModalManager(options: ModalManagerOptions): ModalManager {
       setSession: options.setSession,
       isProviderConfigured: options.isProviderConfigured,
     }),
-    [close, open, options, update],
+    [
+      close,
+      open,
+      options.activeSessionId,
+      options.config,
+      options.isProviderConfigured,
+      options.selectedModel,
+      options.selectedSubject,
+      options.session,
+      options.setSession,
+      options.updateSettings,
+      update,
+    ],
   );
-  contextRef.current = context;
+
+  React.useEffect(() => {
+    contextRef.current = context;
+  }, [context]);
 
   const triggers = React.useMemo(
     () =>

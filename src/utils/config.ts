@@ -12,7 +12,8 @@ import {
   type MigrationReport,
   type OpenStudyPersistence,
 } from '../infrastructure/persistence/index.js';
-import type { Config, SessionSettings } from '../types/index.js';
+import type { ActiveProviderConfig } from '../domain/provider.js';
+import type { SessionSettings } from '../domain/study.js';
 
 const CONFIG_DIR = path.join(os.homedir(), '.openstudy');
 const CONFIG_FILE = path.join(CONFIG_DIR, 'config.json');
@@ -86,12 +87,12 @@ export function configExists(): boolean {
   return loadConfig() !== null;
 }
 
-export function loadConfig(): Config | null {
+export function loadConfig(): ActiveProviderConfig | null {
   const config = persistence.readProviderConfig();
   return config?.provider ? { provider: config.provider, apiKey: config.apiKey } : null;
 }
 
-export function saveConfig(config: Config): void {
+export function saveConfig(config: ActiveProviderConfig): void {
   persistence.writeProviderConfig(config);
 }
 

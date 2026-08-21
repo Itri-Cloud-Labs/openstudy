@@ -1,9 +1,10 @@
 import { Box, Text } from 'ink';
-import type { SessionSettings } from '../types/index.js';
+import type { SessionSettings } from '../domain/study.js';
 import { focusTextColor, getAllSession } from '../utils/index.js';
 import { formatMaterialLabel, truncate } from '../shared/text.js';
 import { createHandleInput, isCancel, isSubmit } from './input.js';
 import type { ModalContext, ModalInputProps, ModalRenderProps, ModalState } from './types.js';
+import { THEME } from '../shared/theme.js';
 
 const SESSIONS_MODAL_MAX_ROWS = 8;
 
@@ -40,17 +41,17 @@ export function render({ modal, context }: ModalRenderProps) {
   return (
     <>
       <Box justifyContent="space-between" marginBottom={1}>
-        <Text color="#f0f0f0" bold>
+        <Text color={THEME.text} bold>
           Saved Sessions
         </Text>
-        <Text color="#777777">esc</Text>
+        <Text color={THEME.textMuted}>esc</Text>
       </Box>
       <Box marginBottom={1}>
-        <Text color="#777777">Choose a session to resume.</Text>
+        <Text color={THEME.textMuted}>Choose a session to resume.</Text>
       </Box>
       <Box flexDirection="column" marginBottom={1}>
         {sessions.length === 0 ? (
-          <Text color="#777777">No saved sessions yet</Text>
+          <Text color={THEME.textMuted}>No saved sessions yet</Text>
         ) : (
           visibleSessions.map((session, index) => {
             const sessionIndex = windowStart + index;
@@ -63,10 +64,10 @@ export function render({ modal, context }: ModalRenderProps) {
                 backgroundColor={isSelected ? subjectColor : undefined}
                 justifyContent="space-between"
               >
-                <Text color={isSelected ? '#000000' : '#f0f0f0'} bold={isSelected}>
+                <Text color={isSelected ? THEME.onAccent : THEME.text} bold={isSelected}>
                   {truncate(getSessionTitle(session), 34)}
                 </Text>
-                <Text color={focusTextColor(isCurrent ? '#22c55e' : '#777777', subjectColor, isSelected)}>
+                <Text color={focusTextColor(isCurrent ? THEME.success : THEME.textMuted, subjectColor, isSelected)}>
                   {isCurrent ? 'current' : getSessionMeta(session)}
                 </Text>
               </Box>
@@ -76,17 +77,17 @@ export function render({ modal, context }: ModalRenderProps) {
       </Box>
       {state.error && (
         <Box marginBottom={1}>
-          <Text color="#ef4444">{state.error}</Text>
+          <Text color={THEME.danger}>{state.error}</Text>
         </Box>
       )}
       <Box justifyContent="space-between">
-        <Text color="#777777">
+        <Text color={THEME.textMuted}>
           up/down{' '}
           {sessions.length === 0
             ? '0-0/0'
             : `${windowStart + 1}-${windowStart + visibleSessions.length}/${sessions.length}`}
         </Text>
-        <Text color="#777777">enter open</Text>
+        <Text color={THEME.textMuted}>enter open</Text>
       </Box>
     </>
   );

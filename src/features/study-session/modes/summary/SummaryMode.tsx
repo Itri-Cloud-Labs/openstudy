@@ -3,6 +3,7 @@ import { Box, Text, useInput } from 'ink';
 import { lexer, type Token, type Tokens } from 'marked';
 import { type SummaryState } from './useSummary.js';
 import { THEME } from '../../../../shared/theme.js';
+import { truncate } from '../../../../shared/text.js';
 import { isTerminalMouseReport, parseMouseWheelScroll } from '../../../../utils/input.js';
 
 type SummaryLine = {
@@ -12,12 +13,15 @@ type SummaryLine = {
   dim?: boolean;
 };
 
-export interface SummaryModeProps {
+export interface ModeProps {
   contentWidth: number;
   contentHeight: number;
-  summaryState: SummaryState;
   inputActive: boolean;
   commandMenuActive: boolean;
+}
+
+export interface SummaryModeProps extends ModeProps {
+  summaryState: SummaryState;
 }
 
 export function SummaryMode({
@@ -423,8 +427,4 @@ function wrapText(text: string, width: number) {
 
     return chunks.length > 0 ? chunks : [''];
   });
-}
-
-function truncate(value: string, maxLength: number) {
-  return value.length > maxLength ? `${value.slice(0, maxLength - 3)}...` : value;
 }

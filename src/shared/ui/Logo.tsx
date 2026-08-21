@@ -1,5 +1,6 @@
 import React from 'react';
 import { Box, Text } from 'ink';
+import { THEME } from '../theme.js';
 
 // Pre-split ASCII art. Each line is sliced at column 21 where "Study" begins.
 // "Open" portion → dim gray, "Study" portion → bright white.
@@ -27,8 +28,8 @@ export const Logo: React.FC = React.memo(() => (
   <Box flexDirection="column">
     {LINES.map(([open, study]) => (
       <Box key={`${open}:${study}`} flexDirection="row">
-        <Text color="#666666">{open}</Text>
-        <Text color="#dddddd" bold>
+        <Text color={THEME.textFaint}>{open}</Text>
+        <Text color={THEME.text} bold>
           {study}
         </Text>
       </Box>

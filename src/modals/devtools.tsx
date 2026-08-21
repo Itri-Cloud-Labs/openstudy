@@ -4,6 +4,7 @@ import { erasePersistenceRoot } from '../infrastructure/persistence/index.js';
 import { getSessionById } from '../utils/index.js';
 import { createHandleInput, isBackspace, isCancel, isPlainTextInput, isSubmit } from './input.js';
 import type { ModalContext, ModalInputProps, ModalRenderProps, ModalState } from './types.js';
+import { THEME } from '../shared/theme.js';
 
 const DEVTOOLS_MAX_ROWS = 10;
 
@@ -82,13 +83,13 @@ function OptionsLayer({
   return (
     <>
       <Box justifyContent="space-between" marginBottom={1}>
-        <Text color="#f0f0f0" bold>
+        <Text color={THEME.text} bold>
           Dev Tools
         </Text>
-        <Text color="#777777">esc</Text>
+        <Text color={THEME.textMuted}>esc</Text>
       </Box>
       <Box marginBottom={1}>
-        <Text color="#777777">Choose a diagnostic action.</Text>
+        <Text color={THEME.textMuted}>Choose a diagnostic action.</Text>
       </Box>
       <Box flexDirection="column" marginBottom={1}>
         {OPTIONS.map((option, index) => {
@@ -96,17 +97,20 @@ function OptionsLayer({
 
           return (
             <Box key={option.id} backgroundColor={isSelected ? subjectColor : undefined} justifyContent="space-between">
-              <Text color={isSelected ? '#000000' : option.disabled ? '#777777' : '#f0f0f0'} bold={isSelected}>
+              <Text
+                color={isSelected ? THEME.onAccent : option.disabled ? THEME.textMuted : THEME.text}
+                bold={isSelected}
+              >
                 {option.label}
               </Text>
-              <Text color={isSelected ? '#000000' : '#777777'}>{option.description}</Text>
+              <Text color={isSelected ? THEME.onAccent : THEME.textMuted}>{option.description}</Text>
             </Box>
           );
         })}
       </Box>
       <Box justifyContent="space-between">
-        <Text color="#777777">↑↓ move</Text>
-        <Text color="#777777">enter open</Text>
+        <Text color={THEME.textMuted}>↑↓ move</Text>
+        <Text color={THEME.textMuted}>enter open</Text>
       </Box>
     </>
   );
@@ -116,29 +120,29 @@ function EraseLayer({ modal }: { modal: Extract<DevtoolsModalState, { layer: 'er
   return (
     <>
       <Box justifyContent="space-between" marginBottom={1}>
-        <Text color="#ef4444" bold>
+        <Text color={THEME.danger} bold>
           Dangerous Action
         </Text>
-        <Text color="#777777">esc</Text>
+        <Text color={THEME.textMuted}>esc</Text>
       </Box>
       <Box marginBottom={1} flexDirection="column">
-        <Text color="#f0f0f0">This will permanently delete:</Text>
-        <Text color="#ef4444">{CONFIG_DIR}</Text>
+        <Text color={THEME.text}>This will permanently delete:</Text>
+        <Text color={THEME.danger}>{CONFIG_DIR}</Text>
       </Box>
       <Box marginBottom={1}>
-        <Text color="#777777">Type </Text>
-        <Text color="#f0a500" bold>
+        <Text color={THEME.textMuted}>Type </Text>
+        <Text color={THEME.primary} bold>
           ERASE
         </Text>
-        <Text color="#777777"> to confirm.</Text>
+        <Text color={THEME.textMuted}> to confirm.</Text>
       </Box>
-      <Box backgroundColor="#1f1f23" paddingX={1} marginBottom={1}>
-        <Text color={modal.confirmation ? '#f0f0f0' : '#777777'}>{modal.confirmation || 'ERASE'}</Text>
-        <Text color="#ef4444">█</Text>
+      <Box backgroundColor={THEME.backgroundRaised} paddingX={1} marginBottom={1}>
+        <Text color={modal.confirmation ? THEME.text : THEME.textMuted}>{modal.confirmation || 'ERASE'}</Text>
+        <Text color={THEME.danger}>█</Text>
       </Box>
       <Box justifyContent="space-between">
-        <Text color={modal.error ? '#ef4444' : '#777777'}>{modal.error ?? '← tools'}</Text>
-        <Text color="#777777">enter confirm</Text>
+        <Text color={modal.error ? THEME.danger : THEME.textMuted}>{modal.error ?? '← tools'}</Text>
+        <Text color={THEME.textMuted}>enter confirm</Text>
       </Box>
     </>
   );
@@ -148,16 +152,16 @@ function ResultLayer({ modal }: { modal: Extract<DevtoolsModalState, { layer: 'r
   return (
     <>
       <Box justifyContent="space-between" marginBottom={1}>
-        <Text color="#f0f0f0" bold>
+        <Text color={THEME.text} bold>
           {modal.title}
         </Text>
-        <Text color="#777777">esc</Text>
+        <Text color={THEME.textMuted}>esc</Text>
       </Box>
       <Box marginBottom={1}>
-        <Text color="#b0b0b6">{modal.message}</Text>
+        <Text color={THEME.textMuted}>{modal.message}</Text>
       </Box>
       <Box justifyContent="flex-end">
-        <Text color="#777777">enter close</Text>
+        <Text color={THEME.textMuted}>enter close</Text>
       </Box>
     </>
   );
@@ -172,26 +176,26 @@ function SessionDumpLayer({ modal }: ModalRenderProps & { modal: Extract<Devtool
   return (
     <>
       <Box justifyContent="space-between" marginBottom={1}>
-        <Text color="#f0f0f0" bold>
+        <Text color={THEME.text} bold>
           Session Dump
         </Text>
-        <Text color="#777777">esc</Text>
+        <Text color={THEME.textMuted}>esc</Text>
       </Box>
       <Box marginBottom={1}>
-        <Text color="#777777">Current session object.</Text>
+        <Text color={THEME.textMuted}>Current session object.</Text>
       </Box>
       <Box flexDirection="column" marginBottom={1}>
         {visibleLines.map((line, index) => (
-          <Text key={`${scroll + index}:${line}`} color="#d4d4d8">
+          <Text key={`${scroll + index}:${line}`} color={THEME.text}>
             {line}
           </Text>
         ))}
       </Box>
       <Box justifyContent="space-between">
-        <Text color="#777777">
+        <Text color={THEME.textMuted}>
           ← tools {scroll + 1}-{scroll + visibleLines.length}/{modal.lines.length}
         </Text>
-        <Text color="#777777">↑↓ scroll</Text>
+        <Text color={THEME.textMuted}>↑↓ scroll</Text>
       </Box>
     </>
   );

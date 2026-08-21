@@ -10,6 +10,12 @@ export interface ProviderConfig {
   apiKey: string;
 }
 
+/** Provider credentials known to be configured. */
+export interface ActiveProviderConfig {
+  provider: Provider;
+  apiKey: string;
+}
+
 export function isProvider(value: unknown): value is Provider {
   return value === 'codex' || value === 'opencode';
 }

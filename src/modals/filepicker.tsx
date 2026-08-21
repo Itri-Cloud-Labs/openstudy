@@ -1,8 +1,10 @@
 import { Box, Text } from 'ink';
 import { materialService, type MaterialEntry } from '../infrastructure/materials/index.js';
+import { truncateError } from '../shared/text.js';
 import { focusTextColor } from '../utils/index.js';
 import { createHandleInput, isBackspace, isCancel, isPlainTextInput, isSubmit } from './input.js';
 import type { ModalContext, ModalInputProps, ModalRenderProps, ModalState } from './types.js';
+import { THEME } from '../shared/theme.js';
 
 const FILE_PICKER_MAX_ROWS = 10;
 const HOME_DIR = materialService.homeDirectory;
@@ -47,13 +49,13 @@ function SourceLayer({
   return (
     <>
       <Box justifyContent="space-between" marginBottom={1}>
-        <Text color="#f0f0f0" bold>
+        <Text color={THEME.text} bold>
           Add Material
         </Text>
-        <Text color="#777777">esc</Text>
+        <Text color={THEME.textMuted}>esc</Text>
       </Box>
       <Box marginBottom={1}>
-        <Text color="#777777">Choose where your document comes from.</Text>
+        <Text color={THEME.textMuted}>Choose where your document comes from.</Text>
       </Box>
       <Box flexDirection="column" marginBottom={1}>
         {SOURCE_OPTIONS.map((option, index) => {
@@ -61,17 +63,17 @@ function SourceLayer({
 
           return (
             <Box key={option.id} backgroundColor={isSelected ? subjectColor : undefined} justifyContent="space-between">
-              <Text color={isSelected ? '#000000' : '#f0f0f0'} bold={isSelected}>
+              <Text color={isSelected ? THEME.onAccent : THEME.text} bold={isSelected}>
                 {option.label}
               </Text>
-              <Text color={isSelected ? '#000000' : '#777777'}>{option.description}</Text>
+              <Text color={isSelected ? THEME.onAccent : THEME.textMuted}>{option.description}</Text>
             </Box>
           );
         })}
       </Box>
       <Box justifyContent="space-between">
-        <Text color={modal.error ? '#ef4444' : '#777777'}>{modal.error ?? '↑↓ move'}</Text>
-        <Text color="#777777">enter continue</Text>
+        <Text color={modal.error ? THEME.danger : THEME.textMuted}>{modal.error ?? '↑↓ move'}</Text>
+        <Text color={THEME.textMuted}>enter continue</Text>
       </Box>
     </>
   );
@@ -81,23 +83,23 @@ function UrlLayer({ modal }: { modal: Extract<FilePickerModalState, { layer: 'ur
   return (
     <>
       <Box justifyContent="space-between" marginBottom={1}>
-        <Text color="#f0f0f0" bold>
+        <Text color={THEME.text} bold>
           Material URL
         </Text>
-        <Text color="#777777">esc</Text>
+        <Text color={THEME.textMuted}>esc</Text>
       </Box>
       <Box marginBottom={1}>
-        <Text color="#777777">Enter a direct document URL. Use ctrl+v to paste from clipboard.</Text>
+        <Text color={THEME.textMuted}>Enter a direct document URL. Use ctrl+v to paste from clipboard.</Text>
       </Box>
-      <Box backgroundColor="#1f1f23" paddingX={1} marginBottom={1}>
-        <Text color={modal.url ? '#f0f0f0' : '#777777'}>{modal.url || 'https://example.com/document.pdf'}</Text>
-        {!modal.downloading && <Text color="#f0a500">█</Text>}
+      <Box backgroundColor={THEME.backgroundRaised} paddingX={1} marginBottom={1}>
+        <Text color={modal.url ? THEME.text : THEME.textMuted}>{modal.url || 'https://example.com/document.pdf'}</Text>
+        {!modal.downloading && <Text color={THEME.primary}>█</Text>}
       </Box>
       <Box justifyContent="space-between">
-        <Text color={modal.error ? '#ef4444' : '#777777'}>
+        <Text color={modal.error ? THEME.danger : THEME.textMuted}>
           {modal.error ? truncateError(modal.error) : '← sources'}
         </Text>
-        <Text color="#777777">{modal.downloading ? 'downloading...' : 'enter download'}</Text>
+        <Text color={THEME.textMuted}>{modal.downloading ? 'downloading...' : 'enter download'}</Text>
       </Box>
     </>
   );
@@ -116,22 +118,22 @@ function BrowserLayer({
   return (
     <>
       <Box justifyContent="space-between" marginBottom={1}>
-        <Text color="#f0f0f0" bold>
+        <Text color={THEME.text} bold>
           Select Material
         </Text>
-        <Text color="#777777">esc</Text>
+        <Text color={THEME.textMuted}>esc</Text>
       </Box>
       <Box marginBottom={1}>
-        <Text color="#777777">{materialService.shortenPath(state.cwd)}</Text>
+        <Text color={THEME.textMuted}>{materialService.shortenPath(state.cwd)}</Text>
       </Box>
       <Box flexDirection="column" marginBottom={1}>
         {visibleEntries.length === 0 ? (
-          <Text color="#777777">No documents found</Text>
+          <Text color={THEME.textMuted}>No documents found</Text>
         ) : (
           visibleEntries.map((entry, index) => {
             const entryIndex = windowStart + index;
             const isSelected = state.selected === entryIndex;
-            const iconColor = entry.type === 'directory' ? subjectColor : '#888888';
+            const iconColor = entry.type === 'directory' ? subjectColor : THEME.textMuted;
 
             return (
               <Box
@@ -142,23 +144,25 @@ function BrowserLayer({
                 <Text color={focusTextColor(iconColor, subjectColor, isSelected)} bold={isSelected}>
                   {entry.type === 'directory' ? '▸ ' : '  '}
                 </Text>
-                <Text color={isSelected ? '#000000' : '#f0f0f0'} bold={isSelected}>
+                <Text color={isSelected ? THEME.onAccent : THEME.text} bold={isSelected}>
                   {entry.name}
                 </Text>
-                <Text color={isSelected ? '#000000' : '#777777'}>{entry.type === 'directory' ? 'dir' : 'file'}</Text>
+                <Text color={isSelected ? THEME.onAccent : THEME.textMuted}>
+                  {entry.type === 'directory' ? 'dir' : 'file'}
+                </Text>
               </Box>
             );
           })
         )}
       </Box>
       <Box justifyContent="space-between">
-        <Text color={state.error ? '#ef4444' : '#777777'}>
+        <Text color={state.error ? THEME.danger : THEME.textMuted}>
           {state.error ? truncateError(state.error) : state.cwd === HOME_DIR ? '← sources' : '← parent'}
         </Text>
-        <Text color="#777777">enter open/select</Text>
+        <Text color={THEME.textMuted}>enter open/select</Text>
       </Box>
       <Box justifyContent="flex-end">
-        <Text color="#777777">
+        <Text color={THEME.textMuted}>
           {windowStart + 1}-{windowStart + visibleEntries.length}/{state.entries.length}
         </Text>
       </Box>
@@ -382,9 +386,4 @@ function readDirectory(directory: string): FilePickerModalState {
     selected: 0,
     ...(result.error ? { error: result.error } : {}),
   };
-}
-
-function truncateError(message: string) {
-  const normalized = message.replace(/\s+/g, ' ').trim();
-  return normalized.length > 54 ? `${normalized.slice(0, 53)}…` : normalized;
 }

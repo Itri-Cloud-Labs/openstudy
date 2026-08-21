@@ -1,7 +1,8 @@
 import type React from 'react';
 import type { useInput } from 'ink';
 import type { SubjectOption } from '../options/index.js';
-import type { Config, Provider, SessionSettings } from '../types/index.js';
+import type { ActiveProviderConfig, Provider } from '../domain/provider.js';
+import type { SessionSettings } from '../domain/study.js';
 
 export interface SelectedModel {
   provider: Provider;
@@ -53,7 +54,7 @@ export interface ModalTrigger {
 export interface ModalContext {
   session: SessionSettings;
   activeSessionId: string | null;
-  config: Config | null;
+  config: ActiveProviderConfig | null;
   selectedSubject: SubjectOption | null;
   selectedModel: SelectedModel | null;
   openModal: OpenModal;

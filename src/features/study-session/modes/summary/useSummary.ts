@@ -2,7 +2,7 @@ import React from 'react';
 import { materialService, type ResolvedMaterial } from '../../../../infrastructure/materials/index.js';
 import { createProvider } from '../../../../providers/index.js';
 import { truncate } from '../../../../shared/text.js';
-import type { Provider } from '../../../../types/index.js';
+import type { Provider } from '../../../../domain/provider.js';
 import { getSessionById, saveSessionById } from '../../../../utils/index.js';
 import { generateSummary } from './generate-summary.js';
 
