@@ -1,13 +1,33 @@
 #!/usr/bin/env node
-import fs from 'fs';
-import path from 'path';
-import os from 'os';
+import fs from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
 
-const configFile = path.join(os.homedir(), '.openstudy', 'config.json');
+const configDirectory = path.join(os.homedir(), '.openstudy');
+const resetAll = process.argv.includes('--all');
+const confirmed = process.argv.includes('--yes');
 
-if (fs.existsSync(configFile)) {
-  fs.unlinkSync(configFile);
-  console.log('Config reset. Run openstudy to set up again.');
+if (resetAll) {
+  if (!confirmed) {
+    console.error('This removes all OpenStudy settings, saved sessions, and downloaded material.');
+    console.error('Confirm with: npm run reset:all -- --yes');
+    process.exitCode = 1;
+  } else {
+    fs.rmSync(configDirectory, { recursive: true, force: true });
+    console.log('Removed all local OpenStudy data.');
+  }
 } else {
-  console.log('No config found — nothing to reset.');
+  const files = ['config.json', 'session.json'];
+  const removed = files.filter(file => {
+    const target = path.join(configDirectory, file);
+    const existed = fs.existsSync(target);
+    fs.rmSync(target, { force: true });
+    return existed;
+  });
+
+  console.log(
+    removed.length > 0
+      ? `Reset OpenStudy settings (${removed.join(', ')}). Saved sessions and downloaded material were preserved.`
+      : 'No OpenStudy settings found; nothing changed.',
+  );
 }

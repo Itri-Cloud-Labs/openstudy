@@ -1,8 +1,7 @@
-import path from 'path';
-import React from 'react';
 import { Box, Text } from 'ink';
 import type { SessionSettings } from '../types/index.js';
 import { focusTextColor, getAllSession } from '../utils/index.js';
+import { formatMaterialLabel, truncate } from '../shared/text.js';
 import { createHandleInput, isCancel, isSubmit } from './input.js';
 import type { ModalContext, ModalInputProps, ModalRenderProps, ModalState } from './types.js';
 
@@ -11,6 +10,7 @@ const SESSIONS_MODAL_MAX_ROWS = 8;
 interface SessionsModalState extends ModalState {
   id: 'sessions';
   selected: number;
+  sessions: SessionSettings[];
   error?: string;
 }
 
@@ -18,13 +18,12 @@ export function open(context: ModalContext): ModalState {
   const sessions = getStoredSessions();
   const currentIndex = sessions.findIndex(session => session.sessionId === context.activeSessionId);
 
-  return { id: 'sessions', selected: Math.max(0, currentIndex) };
+  return { id: 'sessions', selected: Math.max(0, currentIndex), sessions };
 }
 
 export function getHeight(modal: ModalState) {
-  const sessions = getStoredSessions();
-  const rows = Math.max(1, Math.min(SESSIONS_MODAL_MAX_ROWS, sessions.length));
   const state = modal as SessionsModalState;
+  const rows = Math.max(1, Math.min(SESSIONS_MODAL_MAX_ROWS, state.sessions.length));
 
   return rows + (state.error ? 7 : 6);
 }
@@ -32,19 +31,18 @@ export function getHeight(modal: ModalState) {
 export function render({ modal, context }: ModalRenderProps) {
   const state = modal as SessionsModalState;
   const subjectColor = context.selectedSubject?.color ?? '#3b82f6';
-  const sessions = getStoredSessions();
+  const sessions = state.sessions;
   const rows = Math.max(1, Math.min(SESSIONS_MODAL_MAX_ROWS, sessions.length));
   const selected = Math.min(state.selected, Math.max(0, sessions.length - 1));
-  const windowStart = Math.min(
-    Math.max(0, selected - rows + 1),
-    Math.max(0, sessions.length - rows),
-  );
+  const windowStart = Math.min(Math.max(0, selected - rows + 1), Math.max(0, sessions.length - rows));
   const visibleSessions = sessions.slice(windowStart, windowStart + rows);
 
   return (
     <>
       <Box justifyContent="space-between" marginBottom={1}>
-        <Text color="#f0f0f0" bold>Saved Sessions</Text>
+        <Text color="#f0f0f0" bold>
+          Saved Sessions
+        </Text>
         <Text color="#777777">esc</Text>
       </Box>
       <Box marginBottom={1}>
@@ -53,18 +51,28 @@ export function render({ modal, context }: ModalRenderProps) {
       <Box flexDirection="column" marginBottom={1}>
         {sessions.length === 0 ? (
           <Text color="#777777">No saved sessions yet</Text>
-        ) : visibleSessions.map((session, index) => {
-          const sessionIndex = windowStart + index;
-          const isSelected = selected === sessionIndex;
-          const isCurrent = session.sessionId === context.activeSessionId;
+        ) : (
+          visibleSessions.map((session, index) => {
+            const sessionIndex = windowStart + index;
+            const isSelected = selected === sessionIndex;
+            const isCurrent = session.sessionId === context.activeSessionId;
 
-          return (
-            <Box key={session.sessionId ?? sessionIndex} backgroundColor={isSelected ? subjectColor : undefined} justifyContent="space-between">
-              <Text color={isSelected ? '#000000' : '#f0f0f0'} bold={isSelected}>{truncate(getSessionTitle(session), 34)}</Text>
-              <Text color={focusTextColor(isCurrent ? '#22c55e' : '#777777', subjectColor, isSelected)}>{isCurrent ? 'current' : getSessionMeta(session)}</Text>
-            </Box>
-          );
-        })}
+            return (
+              <Box
+                key={session.sessionId ?? sessionIndex}
+                backgroundColor={isSelected ? subjectColor : undefined}
+                justifyContent="space-between"
+              >
+                <Text color={isSelected ? '#000000' : '#f0f0f0'} bold={isSelected}>
+                  {truncate(getSessionTitle(session), 34)}
+                </Text>
+                <Text color={focusTextColor(isCurrent ? '#22c55e' : '#777777', subjectColor, isSelected)}>
+                  {isCurrent ? 'current' : getSessionMeta(session)}
+                </Text>
+              </Box>
+            );
+          })
+        )}
       </Box>
       {state.error && (
         <Box marginBottom={1}>
@@ -72,7 +80,12 @@ export function render({ modal, context }: ModalRenderProps) {
         </Box>
       )}
       <Box justifyContent="space-between">
-        <Text color="#777777">up/down {sessions.length === 0 ? '0-0/0' : `${windowStart + 1}-${windowStart + visibleSessions.length}/${sessions.length}`}</Text>
+        <Text color="#777777">
+          up/down{' '}
+          {sessions.length === 0
+            ? '0-0/0'
+            : `${windowStart + 1}-${windowStart + visibleSessions.length}/${sessions.length}`}
+        </Text>
         <Text color="#777777">enter open</Text>
       </Box>
     </>
@@ -100,11 +113,14 @@ export const handleInput = createHandleInput([
 
 function selectSession({ modal, context }: ModalInputProps) {
   const state = modal as SessionsModalState;
-  const sessions = getStoredSessions();
+  const sessions = state.sessions;
   const session = sessions[state.selected];
 
   if (!session?.sessionId) {
-    context.updateModal({ ...state, error: sessions.length === 0 ? 'No saved sessions to open.' : 'Selected session is missing an id.' });
+    context.updateModal({
+      ...state,
+      error: sessions.length === 0 ? 'No saved sessions to open.' : 'Selected session is missing an id.',
+    });
     return;
   }
 
@@ -119,10 +135,14 @@ function selectSession({ modal, context }: ModalInputProps) {
 
 function moveSelection({ modal, context }: ModalInputProps, direction: -1 | 1) {
   const state = modal as SessionsModalState;
-  const sessions = getStoredSessions();
+  const sessions = state.sessions;
   if (sessions.length === 0) return;
 
-  context.updateModal({ ...state, selected: (state.selected + direction + sessions.length) % sessions.length, error: undefined });
+  context.updateModal({
+    ...state,
+    selected: (state.selected + direction + sessions.length) % sessions.length,
+    error: undefined,
+  });
 }
 
 function getStoredSessions() {
@@ -139,7 +159,7 @@ function getSessionTitle(session: SessionSettings) {
   if (session.title?.trim()) return session.title;
 
   if (session.material) {
-    return formatMaterialLabel(session.material);
+    return formatMaterialLabel(session.material, 34);
   }
 
   return session.sessionId ? `Session ${session.sessionId.slice(0, 8)}` : 'Untitled Session';
@@ -180,18 +200,4 @@ function formatRelativeDate(iso: string) {
   if (days < 28) return `${Math.floor(days / 7)} weeks ago`;
 
   return date.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
-}
-
-function formatMaterialLabel(material: string) {
-  const normalized = material.replace(/\\/g, '/');
-  if (/^https?:\/\//i.test(normalized)) return truncate(normalized, 34);
-
-  const parent = path.basename(path.dirname(normalized));
-  const file = path.basename(normalized);
-
-  return truncate(!parent || parent === '.' || parent === path.sep ? file : `${parent}/${file}`, 34);
-}
-
-function truncate(value: string, maxLength: number) {
-  return value.length > maxLength ? `${value.slice(0, maxLength - 3)}...` : value;
 }

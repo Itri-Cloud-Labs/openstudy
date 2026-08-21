@@ -1,4 +1,3 @@
-import React from 'react';
 import { Box, Text } from 'ink';
 import { createProvider, type ProviderReasoningLevel } from '../providers/index.js';
 import { focusTextColor } from '../utils/index.js';
@@ -56,7 +55,9 @@ export function render({ modal, context }: ModalRenderProps) {
     return (
       <>
         <Box justifyContent="space-between" marginBottom={1}>
-          <Text color="#f0f0f0" bold>Select Reasoning</Text>
+          <Text color="#f0f0f0" bold>
+            Select Reasoning
+          </Text>
           <Text color="#777777">esc</Text>
         </Box>
         <Box marginBottom={1}>
@@ -70,17 +71,16 @@ export function render({ modal, context }: ModalRenderProps) {
   }
 
   const rows = Math.max(1, Math.min(REASONING_MODAL_MAX_ROWS, state.levels.length));
-  const windowStart = Math.min(
-    Math.max(0, state.selected - rows + 1),
-    Math.max(0, state.levels.length - rows),
-  );
+  const windowStart = Math.min(Math.max(0, state.selected - rows + 1), Math.max(0, state.levels.length - rows));
   const visibleLevels = state.levels.slice(windowStart, windowStart + rows);
   const subjectColor = context.selectedSubject?.color ?? '#3b82f6';
 
   return (
     <>
       <Box justifyContent="space-between" marginBottom={1}>
-        <Text color="#f0f0f0" bold>{state.providerLabel}/{state.model}</Text>
+        <Text color="#f0f0f0" bold>
+          {state.providerLabel}/{state.model}
+        </Text>
         <Text color="#777777">esc</Text>
       </Box>
       <Box marginBottom={1}>
@@ -94,14 +94,18 @@ export function render({ modal, context }: ModalRenderProps) {
 
           return (
             <Box key={level.id} backgroundColor={isSelected ? subjectColor : undefined} justifyContent="space-between">
-              <Text color={isSelected ? '#000000' : '#f0f0f0'} bold={isSelected}>{level.label}</Text>
+              <Text color={isSelected ? '#000000' : '#f0f0f0'} bold={isSelected}>
+                {level.label}
+              </Text>
               {isCurrent && <Text color={focusTextColor('#22c55e', subjectColor, isSelected)}>current</Text>}
             </Box>
           );
         })}
       </Box>
       <Box justifyContent="space-between">
-        <Text color="#777777">↑↓ move {windowStart + 1}-{windowStart + visibleLevels.length}/{state.levels.length}</Text>
+        <Text color="#777777">
+          ↑↓ move {windowStart + 1}-{windowStart + visibleLevels.length}/{state.levels.length}
+        </Text>
         <Text color="#777777">enter select</Text>
       </Box>
     </>

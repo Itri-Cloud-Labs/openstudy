@@ -1,7 +1,6 @@
-import fs from 'fs';
-import React from 'react';
 import { Box, Text } from 'ink';
 import { CONFIG_DIR } from '../utils/config.js';
+import { erasePersistenceRoot } from '../infrastructure/persistence/index.js';
 import { getSessionById } from '../utils/index.js';
 import { createHandleInput, isBackspace, isCancel, isPlainTextInput, isSubmit } from './input.js';
 import type { ModalContext, ModalInputProps, ModalRenderProps, ModalState } from './types.js';
@@ -10,7 +9,12 @@ const DEVTOOLS_MAX_ROWS = 10;
 
 const OPTIONS = [
   { id: 'session', label: 'Dump session object', description: 'Show current persisted session state', disabled: false },
-  { id: 'erase', label: 'Erase .openstudy directory', description: 'DANGEROUS: reset all OpenStudy state', disabled: false },
+  {
+    id: 'erase',
+    label: 'Erase .openstudy directory',
+    description: 'DANGEROUS: reset all OpenStudy state',
+    disabled: false,
+  },
   { id: 'more', label: 'More tools soon', description: 'Placeholder for future dev tools', disabled: true },
 ] as const;
 
@@ -45,15 +49,23 @@ export function render(props: ModalRenderProps) {
 export const handleInput = createHandleInput([
   {
     when: props => isOptionsLayer(props) && isOptionsInput(props),
-    run: props => handleOptionsInput(props.key, props.modal as Extract<DevtoolsModalState, { layer: 'options' }>, props.context),
+    run: props =>
+      handleOptionsInput(props.key, props.modal as Extract<DevtoolsModalState, { layer: 'options' }>, props.context),
   },
   {
     when: props => isSessionLayer(props) && isSessionInput(props),
-    run: props => handleSessionInput(props.key, props.modal as Extract<DevtoolsModalState, { layer: 'session' }>, props.context),
+    run: props =>
+      handleSessionInput(props.key, props.modal as Extract<DevtoolsModalState, { layer: 'session' }>, props.context),
   },
   {
     when: props => isEraseLayer(props) && isEraseInput(props),
-    run: props => handleEraseInput(props.input, props.key, props.modal as Extract<DevtoolsModalState, { layer: 'erase' }>, props.context),
+    run: props =>
+      handleEraseInput(
+        props.input,
+        props.key,
+        props.modal as Extract<DevtoolsModalState, { layer: 'erase' }>,
+        props.context,
+      ),
   },
   {
     when: props => isResultLayer(props) && (isCancel(props) || isSubmit(props)),
@@ -61,13 +73,18 @@ export const handleInput = createHandleInput([
   },
 ]);
 
-function OptionsLayer({ modal, context }: ModalRenderProps & { modal: Extract<DevtoolsModalState, { layer: 'options' }> }) {
+function OptionsLayer({
+  modal,
+  context,
+}: ModalRenderProps & { modal: Extract<DevtoolsModalState, { layer: 'options' }> }) {
   const subjectColor = context.selectedSubject?.color ?? '#3b82f6';
 
   return (
     <>
       <Box justifyContent="space-between" marginBottom={1}>
-        <Text color="#f0f0f0" bold>Dev Tools</Text>
+        <Text color="#f0f0f0" bold>
+          Dev Tools
+        </Text>
         <Text color="#777777">esc</Text>
       </Box>
       <Box marginBottom={1}>
@@ -79,7 +96,9 @@ function OptionsLayer({ modal, context }: ModalRenderProps & { modal: Extract<De
 
           return (
             <Box key={option.id} backgroundColor={isSelected ? subjectColor : undefined} justifyContent="space-between">
-              <Text color={isSelected ? '#000000' : option.disabled ? '#777777' : '#f0f0f0'} bold={isSelected}>{option.label}</Text>
+              <Text color={isSelected ? '#000000' : option.disabled ? '#777777' : '#f0f0f0'} bold={isSelected}>
+                {option.label}
+              </Text>
               <Text color={isSelected ? '#000000' : '#777777'}>{option.description}</Text>
             </Box>
           );
@@ -97,7 +116,9 @@ function EraseLayer({ modal }: { modal: Extract<DevtoolsModalState, { layer: 'er
   return (
     <>
       <Box justifyContent="space-between" marginBottom={1}>
-        <Text color="#ef4444" bold>Dangerous Action</Text>
+        <Text color="#ef4444" bold>
+          Dangerous Action
+        </Text>
         <Text color="#777777">esc</Text>
       </Box>
       <Box marginBottom={1} flexDirection="column">
@@ -106,7 +127,9 @@ function EraseLayer({ modal }: { modal: Extract<DevtoolsModalState, { layer: 'er
       </Box>
       <Box marginBottom={1}>
         <Text color="#777777">Type </Text>
-        <Text color="#f0a500" bold>ERASE</Text>
+        <Text color="#f0a500" bold>
+          ERASE
+        </Text>
         <Text color="#777777"> to confirm.</Text>
       </Box>
       <Box backgroundColor="#1f1f23" paddingX={1} marginBottom={1}>
@@ -125,7 +148,9 @@ function ResultLayer({ modal }: { modal: Extract<DevtoolsModalState, { layer: 'r
   return (
     <>
       <Box justifyContent="space-between" marginBottom={1}>
-        <Text color="#f0f0f0" bold>{modal.title}</Text>
+        <Text color="#f0f0f0" bold>
+          {modal.title}
+        </Text>
         <Text color="#777777">esc</Text>
       </Box>
       <Box marginBottom={1}>
@@ -147,7 +172,9 @@ function SessionDumpLayer({ modal }: ModalRenderProps & { modal: Extract<Devtool
   return (
     <>
       <Box justifyContent="space-between" marginBottom={1}>
-        <Text color="#f0f0f0" bold>Session Dump</Text>
+        <Text color="#f0f0f0" bold>
+          Session Dump
+        </Text>
         <Text color="#777777">esc</Text>
       </Box>
       <Box marginBottom={1}>
@@ -155,11 +182,15 @@ function SessionDumpLayer({ modal }: ModalRenderProps & { modal: Extract<Devtool
       </Box>
       <Box flexDirection="column" marginBottom={1}>
         {visibleLines.map((line, index) => (
-          <Text key={`${scroll + index}:${line}`} color="#d4d4d8">{line}</Text>
+          <Text key={`${scroll + index}:${line}`} color="#d4d4d8">
+            {line}
+          </Text>
         ))}
       </Box>
       <Box justifyContent="space-between">
-        <Text color="#777777">← tools {scroll + 1}-{scroll + visibleLines.length}/{modal.lines.length}</Text>
+        <Text color="#777777">
+          ← tools {scroll + 1}-{scroll + visibleLines.length}/{modal.lines.length}
+        </Text>
         <Text color="#777777">↑↓ scroll</Text>
       </Box>
     </>
@@ -219,8 +250,15 @@ function handleOptionsInput(
     if (!option || option.disabled) return;
 
     if (option.id === 'session') {
-      const session = context.activeSessionId ? getSessionById(context.activeSessionId) ?? context.session : context.session;
-      context.updateModal({ id: 'devtools', layer: 'session', scroll: 0, lines: JSON.stringify(session, null, 2).split('\n') });
+      const session = context.activeSessionId
+        ? (getSessionById(context.activeSessionId) ?? context.session)
+        : context.session;
+      context.updateModal({
+        id: 'devtools',
+        layer: 'session',
+        scroll: 0,
+        lines: JSON.stringify(session, null, 2).split('\n'),
+      });
     }
 
     if (option.id === 'erase') {
@@ -280,7 +318,7 @@ function handleEraseInput(
     }
 
     try {
-      fs.rmSync(CONFIG_DIR, { recursive: true, force: true });
+      erasePersistenceRoot(CONFIG_DIR);
       context.updateModal({
         id: 'devtools',
         layer: 'result',

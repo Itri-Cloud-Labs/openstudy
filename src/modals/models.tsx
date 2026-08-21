@@ -1,6 +1,10 @@
-import React from 'react';
 import { Box, Text } from 'ink';
-import { createProvider, getAvailableProviders, type ProviderDefinition, type ProviderModelOption } from '../providers/index.js';
+import {
+  createProvider,
+  getAvailableProviders,
+  type ProviderDefinition,
+  type ProviderModelOption,
+} from '../providers/index.js';
 import type { Provider } from '../types/index.js';
 import { focusTextColor } from '../utils/index.js';
 import { createHandleInput, isBackspace, isCancel, isPlainTextInput, isSubmit } from './input.js';
@@ -14,10 +18,44 @@ type ProviderAuthStatus = { state: 'checking' } | { state: 'ready' } | { state: 
 type ProviderAuthById = Partial<Record<Provider, ProviderAuthStatus>>;
 
 type ModelsModalState =
-  | { id: 'models'; layer: 'providers'; selected: number; auth: ProviderAuthById; authCheckId: string; spinnerFrame: number; error?: string }
-  | { id: 'models'; layer: 'subproviders'; provider: Provider; selected: number; auth: ProviderAuthById; authCheckId: string; spinnerFrame: number }
-  | { id: 'models'; layer: 'models'; provider: Provider; subProvider: string | null; selected: number; auth: ProviderAuthById; authCheckId: string; spinnerFrame: number }
-  | { id: 'models'; layer: 'setup'; provider: Provider; apiKey: string; auth: ProviderAuthById; authCheckId: string; spinnerFrame: number; error?: string };
+  | {
+      id: 'models';
+      layer: 'providers';
+      selected: number;
+      auth: ProviderAuthById;
+      authCheckId: string;
+      spinnerFrame: number;
+      error?: string;
+    }
+  | {
+      id: 'models';
+      layer: 'subproviders';
+      provider: Provider;
+      selected: number;
+      auth: ProviderAuthById;
+      authCheckId: string;
+      spinnerFrame: number;
+    }
+  | {
+      id: 'models';
+      layer: 'models';
+      provider: Provider;
+      subProvider: string | null;
+      selected: number;
+      auth: ProviderAuthById;
+      authCheckId: string;
+      spinnerFrame: number;
+    }
+  | {
+      id: 'models';
+      layer: 'setup';
+      provider: Provider;
+      apiKey: string;
+      auth: ProviderAuthById;
+      authCheckId: string;
+      spinnerFrame: number;
+      error?: string;
+    };
 
 export function open(context: ModalContext): ModalState {
   const providers = getModelProviders();
@@ -36,11 +74,17 @@ export function getHeight(modal: ModalState) {
   const state = modal as ModelsModalState;
   if (state.layer === 'providers') return Math.max(1, getModelProviders().length) + 7;
   if (state.layer === 'subproviders') {
-    const rows = Math.max(1, Math.min(MODEL_MODAL_MAX_ROWS, getSubProviders(getProviderModelOptions(state.provider)).length));
+    const rows = Math.max(
+      1,
+      Math.min(MODEL_MODAL_MAX_ROWS, getSubProviders(getProviderModelOptions(state.provider)).length),
+    );
     return rows + 7;
   }
   if (state.layer === 'models') {
-    const rows = Math.max(1, Math.min(MODEL_MODAL_MAX_ROWS, getProviderModelOptions(state.provider, state.subProvider).length));
+    const rows = Math.max(
+      1,
+      Math.min(MODEL_MODAL_MAX_ROWS, getProviderModelOptions(state.provider, state.subProvider).length),
+    );
     return rows + 7;
   }
 
@@ -61,30 +105,48 @@ export function render(props: ModalRenderProps) {
 export const handleInput = createHandleInput([
   {
     when: props => isProvidersLayer(props) && isProvidersInput(props),
-    run: props => handleProvidersInput(props.key, props.modal as Extract<ModelsModalState, { layer: 'providers' }>, props.context),
+    run: props =>
+      handleProvidersInput(props.key, props.modal as Extract<ModelsModalState, { layer: 'providers' }>, props.context),
   },
   {
     when: props => isSubProvidersLayer(props) && isSubProvidersInput(props),
-    run: props => handleSubProvidersInput(props.key, props.modal as Extract<ModelsModalState, { layer: 'subproviders' }>, props.context),
+    run: props =>
+      handleSubProvidersInput(
+        props.key,
+        props.modal as Extract<ModelsModalState, { layer: 'subproviders' }>,
+        props.context,
+      ),
   },
   {
     when: props => isModelsLayer(props) && isModelsInput(props),
-    run: props => handleModelsInput(props.key, props.modal as Extract<ModelsModalState, { layer: 'models' }>, props.context),
+    run: props =>
+      handleModelsInput(props.key, props.modal as Extract<ModelsModalState, { layer: 'models' }>, props.context),
   },
   {
     when: props => isSetupLayer(props) && isSetupInput(props),
-    run: props => handleSetupInput(props.input, props.key, props.modal as Extract<ModelsModalState, { layer: 'setup' }>, props.context),
+    run: props =>
+      handleSetupInput(
+        props.input,
+        props.key,
+        props.modal as Extract<ModelsModalState, { layer: 'setup' }>,
+        props.context,
+      ),
   },
 ]);
 
-function ProviderLayer({ modal, context }: ModalRenderProps & { modal: Extract<ModelsModalState, { layer: 'providers' }> }) {
+function ProviderLayer({
+  modal,
+  context,
+}: ModalRenderProps & { modal: Extract<ModelsModalState, { layer: 'providers' }> }) {
   const providers = getModelProviders();
   const subjectColor = context.selectedSubject?.color ?? '#3b82f6';
 
   return (
     <>
       <Box justifyContent="space-between" marginBottom={1}>
-        <Text color="#f0f0f0" bold>Select Provider</Text>
+        <Text color="#f0f0f0" bold>
+          Select Provider
+        </Text>
         <Text color="#777777">esc</Text>
       </Box>
       <Box marginBottom={1}>
@@ -93,47 +155,62 @@ function ProviderLayer({ modal, context }: ModalRenderProps & { modal: Extract<M
       <Box flexDirection="column" marginBottom={1}>
         {providers.length === 0 ? (
           <Text color="#777777">No providers available</Text>
-        ) : providers.map((provider, index) => {
-          const isSelected = modal.selected === index;
-          const status = getProviderStatus(provider, context, modal.auth);
-          const statusLabel = status === 'checking'
-            ? SPINNER_FRAMES[modal.spinnerFrame % SPINNER_FRAMES.length]
-            : status === 'ready'
-              ? '✔'
-              : status === 'login'
-                ? '✖'
-            : status;
+        ) : (
+          providers.map((provider, index) => {
+            const isSelected = modal.selected === index;
+            const status = getProviderStatus(provider, context, modal.auth);
+            const statusLabel =
+              status === 'checking'
+                ? SPINNER_FRAMES[modal.spinnerFrame % SPINNER_FRAMES.length]
+                : status === 'ready'
+                  ? '✔'
+                  : status === 'login'
+                    ? '✖'
+                    : status;
 
-          return (
-            <Box key={provider.id} backgroundColor={isSelected ? subjectColor : undefined} justifyContent="space-between">
-              <Text color={isSelected ? '#000000' : '#f0f0f0'} bold={isSelected}>{provider.label}</Text>
-              <Text color={focusTextColor(getProviderStatusColor(status), subjectColor, isSelected)} bold>{statusLabel}</Text>
-            </Box>
-          );
-        })}
+            return (
+              <Box
+                key={provider.id}
+                backgroundColor={isSelected ? subjectColor : undefined}
+                justifyContent="space-between"
+              >
+                <Text color={isSelected ? '#000000' : '#f0f0f0'} bold={isSelected}>
+                  {provider.label}
+                </Text>
+                <Text color={focusTextColor(getProviderStatusColor(status), subjectColor, isSelected)} bold>
+                  {statusLabel}
+                </Text>
+              </Box>
+            );
+          })
+        )}
       </Box>
       <Box justifyContent="space-between">
-        <Text color={modal.error ? '#ef4444' : '#777777'}>{modal.error ? truncateError(modal.error) : providers.length === 0 ? 'providers unavailable' : '↑↓ move'}</Text>
+        <Text color={modal.error ? '#ef4444' : '#777777'}>
+          {modal.error ? truncateError(modal.error) : providers.length === 0 ? 'providers unavailable' : '↑↓ move'}
+        </Text>
         <Text color="#777777">enter continue</Text>
       </Box>
     </>
   );
 }
 
-function SubProvidersLayer({ modal, context }: ModalRenderProps & { modal: Extract<ModelsModalState, { layer: 'subproviders' }> }) {
+function SubProvidersLayer({
+  modal,
+  context,
+}: ModalRenderProps & { modal: Extract<ModelsModalState, { layer: 'subproviders' }> }) {
   const subProviders = getSubProviders(getProviderModelOptions(modal.provider));
   const subjectColor = context.selectedSubject?.color ?? '#3b82f6';
   const rows = Math.max(1, Math.min(MODEL_MODAL_MAX_ROWS, subProviders.length));
-  const windowStart = Math.min(
-    Math.max(0, modal.selected - rows + 1),
-    Math.max(0, subProviders.length - rows),
-  );
+  const windowStart = Math.min(Math.max(0, modal.selected - rows + 1), Math.max(0, subProviders.length - rows));
   const visibleSubProviders = subProviders.slice(windowStart, windowStart + rows);
 
   return (
     <>
       <Box justifyContent="space-between" marginBottom={1}>
-        <Text color="#f0f0f0" bold>{getProviderLabel(modal.provider)}</Text>
+        <Text color="#f0f0f0" bold>
+          {getProviderLabel(modal.provider)}
+        </Text>
         <Text color="#777777">esc</Text>
       </Box>
       <Box marginBottom={1}>
@@ -142,18 +219,22 @@ function SubProvidersLayer({ modal, context }: ModalRenderProps & { modal: Extra
       <Box flexDirection="column" marginBottom={1}>
         {visibleSubProviders.length === 0 ? (
           <Text color="#777777">No providers available</Text>
-        ) : visibleSubProviders.map((sp, index) => {
-          const spIndex = windowStart + index;
-          const isSelected = modal.selected === spIndex;
-          return (
-            <Box key={sp.id} backgroundColor={isSelected ? subjectColor : undefined}>
-              <Text color={isSelected ? '#000000' : '#f0f0f0'} bold={isSelected}>{sp.name}</Text>
-            </Box>
-          );
-        })}
+        ) : (
+          visibleSubProviders.map((sp, index) => {
+            const spIndex = windowStart + index;
+            const isSelected = modal.selected === spIndex;
+            return (
+              <Box key={sp.id} backgroundColor={isSelected ? subjectColor : undefined}>
+                <Text color={isSelected ? '#000000' : '#f0f0f0'} bold={isSelected}>
+                  {sp.name}
+                </Text>
+              </Box>
+            );
+          })
+        )}
       </Box>
       <Box justifyContent="space-between">
-        <Text color="#777777">← back  ↑↓ move</Text>
+        <Text color="#777777">← back ↑↓ move</Text>
         <Text color="#777777">enter continue</Text>
       </Box>
     </>
@@ -173,7 +254,9 @@ function ModelsLayer({ modal, context }: ModalRenderProps & { modal: Extract<Mod
   return (
     <>
       <Box justifyContent="space-between" marginBottom={1}>
-        <Text color="#f0f0f0" bold>{getProviderLabel(modal.provider)}</Text>
+        <Text color="#f0f0f0" bold>
+          {getProviderLabel(modal.provider)}
+        </Text>
         <Text color="#777777">esc</Text>
       </Box>
       <Box marginBottom={1}>
@@ -183,19 +266,28 @@ function ModelsLayer({ modal, context }: ModalRenderProps & { modal: Extract<Mod
         {visibleModels.map((modelOption, index) => {
           const modelIndex = modelWindowStart + index;
           const isSelected = modal.selected === modelIndex;
-          const isCurrent = context.selectedModel?.provider === modal.provider
-            && context.selectedModel.name === modelOption.model;
+          const isCurrent =
+            context.selectedModel?.provider === modal.provider && context.selectedModel.name === modelOption.model;
 
           return (
-            <Box key={modelOption.id} backgroundColor={isSelected ? subjectColor : undefined} justifyContent="space-between">
-              <Text color={isSelected ? '#000000' : '#f0f0f0'} bold={isSelected}>{modelOption.label}</Text>
+            <Box
+              key={modelOption.id}
+              backgroundColor={isSelected ? subjectColor : undefined}
+              justifyContent="space-between"
+            >
+              <Text color={isSelected ? '#000000' : '#f0f0f0'} bold={isSelected}>
+                {modelOption.label}
+              </Text>
               {isCurrent && <Text color={focusTextColor('#22c55e', subjectColor, isSelected)}>current</Text>}
             </Box>
           );
         })}
       </Box>
       <Box justifyContent="space-between">
-        <Text color="#777777">{modal.subProvider ? '← back' : '← providers'} {modelWindowStart + 1}-{modelWindowStart + visibleModels.length}/{modelOptions.length}</Text>
+        <Text color="#777777">
+          {modal.subProvider ? '← back' : '← providers'} {modelWindowStart + 1}-
+          {modelWindowStart + visibleModels.length}/{modelOptions.length}
+        </Text>
         <Text color="#777777">enter select</Text>
       </Box>
     </>
@@ -206,14 +298,18 @@ function SetupLayer({ modal, context }: ModalRenderProps & { modal: Extract<Mode
   return (
     <>
       <Box justifyContent="space-between" marginBottom={1}>
-        <Text color="#f0f0f0" bold>Set Up {getProviderLabel(modal.provider)}</Text>
+        <Text color="#f0f0f0" bold>
+          Set Up {getProviderLabel(modal.provider)}
+        </Text>
         <Text color="#777777">esc</Text>
       </Box>
       <Box marginBottom={1}>
         <Text color="#777777">Enter API key to unlock this provider.</Text>
       </Box>
       <Box backgroundColor="#1f1f23" paddingX={1} marginBottom={1}>
-        <Text color={modal.apiKey ? '#f0f0f0' : '#777777'}>{modal.apiKey ? '*'.repeat(modal.apiKey.length) : 'API key'}</Text>
+        <Text color={modal.apiKey ? '#f0f0f0' : '#777777'}>
+          {modal.apiKey ? '*'.repeat(modal.apiKey.length) : 'API key'}
+        </Text>
         <Text color={context.selectedSubject?.color ?? '#3b82f6'}>█</Text>
       </Box>
       <Box justifyContent="space-between">
@@ -245,11 +341,25 @@ function isProvidersInput(props: ModalInputProps) {
 }
 
 function isSubProvidersInput(props: ModalInputProps) {
-  return isCancel(props) || isSubmit(props) || props.key.leftArrow || isBackspace(props) || props.key.upArrow || props.key.downArrow;
+  return (
+    isCancel(props) ||
+    isSubmit(props) ||
+    props.key.leftArrow ||
+    isBackspace(props) ||
+    props.key.upArrow ||
+    props.key.downArrow
+  );
 }
 
 function isModelsInput(props: ModalInputProps) {
-  return isCancel(props) || isSubmit(props) || props.key.leftArrow || isBackspace(props) || props.key.upArrow || props.key.downArrow;
+  return (
+    isCancel(props) ||
+    isSubmit(props) ||
+    props.key.leftArrow ||
+    isBackspace(props) ||
+    props.key.upArrow ||
+    props.key.downArrow
+  );
 }
 
 function isSetupInput(props: ModalInputProps) {
@@ -270,7 +380,11 @@ function handleProvidersInput(
 
   if (key.upArrow) {
     if (providers.length === 0) return true;
-    context.updateModal({ ...state, selected: (state.selected - 1 + providers.length) % providers.length, error: undefined });
+    context.updateModal({
+      ...state,
+      selected: (state.selected - 1 + providers.length) % providers.length,
+      error: undefined,
+    });
     return true;
   }
 
@@ -306,7 +420,15 @@ function handleProvidersInput(
       return true;
     }
 
-    context.updateModal({ id: 'models', layer: 'setup', provider: provider.id, apiKey: '', auth: state.auth, authCheckId: state.authCheckId, spinnerFrame: state.spinnerFrame });
+    context.updateModal({
+      id: 'models',
+      layer: 'setup',
+      provider: provider.id,
+      apiKey: '',
+      auth: state.auth,
+      authCheckId: state.authCheckId,
+      spinnerFrame: state.spinnerFrame,
+    });
     return true;
   }
 
@@ -319,7 +441,10 @@ function handleSubProvidersInput(
   context: ModalRenderContext,
 ) {
   const subProviders = getSubProviders(getProviderModelOptions(state.provider));
-  const providerIndex = Math.max(0, getModelProviders().findIndex(p => p.id === state.provider));
+  const providerIndex = Math.max(
+    0,
+    getModelProviders().findIndex(p => p.id === state.provider),
+  );
 
   if (key.escape) {
     context.closeModal();
@@ -327,7 +452,14 @@ function handleSubProvidersInput(
   }
 
   if (key.leftArrow || key.backspace || key.delete) {
-    context.updateModal({ id: 'models', layer: 'providers', selected: providerIndex, auth: state.auth, authCheckId: state.authCheckId, spinnerFrame: state.spinnerFrame });
+    context.updateModal({
+      id: 'models',
+      layer: 'providers',
+      selected: providerIndex,
+      auth: state.auth,
+      authCheckId: state.authCheckId,
+      spinnerFrame: state.spinnerFrame,
+    });
     return true;
   }
 
@@ -357,7 +489,10 @@ function handleModelsInput(
   state: Extract<ModelsModalState, { layer: 'models' }>,
   context: ModalRenderContext,
 ) {
-  const providerIndex = Math.max(0, getModelProviders().findIndex(provider => provider.id === state.provider));
+  const providerIndex = Math.max(
+    0,
+    getModelProviders().findIndex(provider => provider.id === state.provider),
+  );
   const modelOptions = getProviderModelOptions(state.provider, state.subProvider);
 
   if (key.escape) {
@@ -368,10 +503,28 @@ function handleModelsInput(
   if (key.leftArrow || key.backspace || key.delete) {
     if (state.subProvider !== null) {
       const subProviders = getSubProviders(getProviderModelOptions(state.provider));
-      const subProviderIndex = Math.max(0, subProviders.findIndex(sp => sp.id === state.subProvider));
-      context.updateModal({ id: 'models', layer: 'subproviders', provider: state.provider, selected: subProviderIndex, auth: state.auth, authCheckId: state.authCheckId, spinnerFrame: state.spinnerFrame });
+      const subProviderIndex = Math.max(
+        0,
+        subProviders.findIndex(sp => sp.id === state.subProvider),
+      );
+      context.updateModal({
+        id: 'models',
+        layer: 'subproviders',
+        provider: state.provider,
+        selected: subProviderIndex,
+        auth: state.auth,
+        authCheckId: state.authCheckId,
+        spinnerFrame: state.spinnerFrame,
+      });
     } else {
-      context.updateModal({ id: 'models', layer: 'providers', selected: providerIndex, auth: state.auth, authCheckId: state.authCheckId, spinnerFrame: state.spinnerFrame });
+      context.updateModal({
+        id: 'models',
+        layer: 'providers',
+        selected: providerIndex,
+        auth: state.auth,
+        authCheckId: state.authCheckId,
+        spinnerFrame: state.spinnerFrame,
+      });
     }
     return true;
   }
@@ -393,7 +546,7 @@ function handleModelsInput(
     if (modelOption) {
       const reasoningEffort = modelOption.reasoningLevels.some(level => level.value === context.session.reasoningEffort)
         ? context.session.reasoningEffort
-        : getDefaultReasoningLevel(modelOption)?.value ?? context.session.reasoningEffort;
+        : (getDefaultReasoningLevel(modelOption)?.value ?? context.session.reasoningEffort);
 
       context.updateSettings({
         modelProvider: state.provider,
@@ -414,7 +567,10 @@ function handleSetupInput(
   state: Extract<ModelsModalState, { layer: 'setup' }>,
   context: ModalRenderContext,
 ) {
-  const providerIndex = Math.max(0, getModelProviders().findIndex(provider => provider.id === state.provider));
+  const providerIndex = Math.max(
+    0,
+    getModelProviders().findIndex(provider => provider.id === state.provider),
+  );
 
   if (key.escape) {
     context.closeModal();
@@ -422,7 +578,14 @@ function handleSetupInput(
   }
 
   if (key.leftArrow) {
-    context.updateModal({ id: 'models', layer: 'providers', selected: providerIndex, auth: state.auth, authCheckId: state.authCheckId, spinnerFrame: state.spinnerFrame });
+    context.updateModal({
+      id: 'models',
+      layer: 'providers',
+      selected: providerIndex,
+      auth: state.auth,
+      authCheckId: state.authCheckId,
+      spinnerFrame: state.spinnerFrame,
+    });
     return true;
   }
 
@@ -451,15 +614,30 @@ function handleSetupInput(
   return false;
 }
 
-function openModelsForProvider(provider: Provider, subProvider: string | null, context: ModalRenderContext, auth: ProviderAuthById) {
+function openModelsForProvider(
+  provider: Provider,
+  subProvider: string | null,
+  context: ModalRenderContext,
+  auth: ProviderAuthById,
+) {
   const currentModels = getProviderModelOptions(provider, subProvider);
-  const selected = context.selectedModel?.provider === provider
-    ? currentModels.findIndex(modelOption => modelOption.model === context.selectedModel?.name)
-    : 0;
+  const selected =
+    context.selectedModel?.provider === provider
+      ? currentModels.findIndex(modelOption => modelOption.model === context.selectedModel?.name)
+      : 0;
 
   context.updateModal(current => {
     const state = current as ModelsModalState;
-    return { id: 'models', layer: 'models', provider, subProvider, selected: Math.max(0, selected), auth, authCheckId: state.authCheckId, spinnerFrame: state.spinnerFrame };
+    return {
+      id: 'models',
+      layer: 'models',
+      provider,
+      subProvider,
+      selected: Math.max(0, selected),
+      auth,
+      authCheckId: state.authCheckId,
+      spinnerFrame: state.spinnerFrame,
+    };
   });
 }
 
@@ -477,7 +655,15 @@ function openSubProvidersForProvider(provider: Provider, context: ModalRenderCon
 
   context.updateModal(current => {
     const state = current as ModelsModalState;
-    return { id: 'models', layer: 'subproviders', provider, selected, auth, authCheckId: state.authCheckId, spinnerFrame: state.spinnerFrame };
+    return {
+      id: 'models',
+      layer: 'subproviders',
+      provider,
+      selected,
+      auth,
+      authCheckId: state.authCheckId,
+      spinnerFrame: state.spinnerFrame,
+    };
   });
 }
 
@@ -519,31 +705,44 @@ function getProviderLabel(provider: Provider): string {
 }
 
 async function checkProviderAuth(providers: ModelProviderDefinition[]): Promise<ProviderAuthById> {
-  const entries = await Promise.all(providers.map(async provider => {
-    const instance = createProvider(provider.id);
+  const entries = await Promise.all(
+    providers.map(async provider => {
+      const instance = createProvider(provider.id);
 
-    if (!instance) {
-      return [provider.id, { state: 'blocked', message: `${provider.label} is unavailable.` }] as const;
-    }
+      if (!instance) {
+        return [provider.id, { state: 'blocked', message: `${provider.label} is unavailable.` }] as const;
+      }
 
-    try {
-      await instance.CheckLoginStatus();
-      return [provider.id, { state: 'ready' }] as const;
-    } catch (error) {
-      const message = error instanceof Error ? error.message : String(error);
-      return [provider.id, { state: 'blocked', message }] as const;
-    }
-  }));
+      try {
+        await instance.CheckLoginStatus();
+        return [provider.id, { state: 'ready' }] as const;
+      } catch (error) {
+        const message = error instanceof Error ? error.message : String(error);
+        return [provider.id, { state: 'blocked', message }] as const;
+      }
+    }),
+  );
 
   return Object.fromEntries(entries) as ProviderAuthById;
 }
 
-function isProviderUsable(provider: ModelProviderDefinition, context: ModalRenderContext, auth: ProviderAuthById): boolean {
+function isProviderUsable(
+  provider: ModelProviderDefinition,
+  context: ModalRenderContext,
+  auth: ProviderAuthById,
+): boolean {
   const status = getAuthStatus(auth, provider.id);
-  return status.state === 'ready' && (!provider.requiresKey || (context.config?.provider === provider.id && context.config.apiKey.trim().length > 0));
+  return (
+    status.state === 'ready' &&
+    (!provider.requiresKey || (context.config?.provider === provider.id && context.config.apiKey.trim().length > 0))
+  );
 }
 
-function getProviderStatus(provider: ModelProviderDefinition, context: ModalRenderContext, auth: ProviderAuthById): 'checking' | 'ready' | 'setup' | 'login' {
+function getProviderStatus(
+  provider: ModelProviderDefinition,
+  context: ModalRenderContext,
+  auth: ProviderAuthById,
+): 'checking' | 'ready' | 'setup' | 'login' {
   const status = getAuthStatus(auth, provider.id);
   if (status.state === 'checking') return 'checking';
   if (status.state === 'blocked') return 'login';
@@ -571,18 +770,28 @@ function startProviderAuthCheck(context: ModalContext, providers: ModelProviderD
     context.updateModal(current => updateMatchingAuthState(current, authCheckId, { spinnerFrame }));
   }, 120);
 
-  void checkProviderAuth(providers).then(auth => {
-    clearInterval(interval);
-    context.updateModal(current => updateMatchingAuthState(current, authCheckId, { auth, spinnerFrame, error: undefined }));
-  }).catch(error => {
-    clearInterval(interval);
-    const message = error instanceof Error ? error.message : String(error);
-    const auth = Object.fromEntries(providers.map(provider => [provider.id, { state: 'blocked', message }])) as ProviderAuthById;
-    context.updateModal(current => updateMatchingAuthState(current, authCheckId, { auth, spinnerFrame }));
-  });
+  void checkProviderAuth(providers)
+    .then(auth => {
+      clearInterval(interval);
+      context.updateModal(current =>
+        updateMatchingAuthState(current, authCheckId, { auth, spinnerFrame, error: undefined }),
+      );
+    })
+    .catch(error => {
+      clearInterval(interval);
+      const message = error instanceof Error ? error.message : String(error);
+      const auth = Object.fromEntries(
+        providers.map(provider => [provider.id, { state: 'blocked', message }]),
+      ) as ProviderAuthById;
+      context.updateModal(current => updateMatchingAuthState(current, authCheckId, { auth, spinnerFrame }));
+    });
 }
 
-function updateMatchingAuthState(current: ModalState, authCheckId: string, patch: Partial<Extract<ModelsModalState, { layer: 'providers' }>>): ModalState {
+function updateMatchingAuthState(
+  current: ModalState,
+  authCheckId: string,
+  patch: Partial<Extract<ModelsModalState, { layer: 'providers' }>>,
+): ModalState {
   const state = current as Partial<ModelsModalState>;
   if (state.id !== 'models' || state.authCheckId !== authCheckId) return current;
 

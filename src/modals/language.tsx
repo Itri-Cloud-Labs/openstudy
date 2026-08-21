@@ -1,4 +1,3 @@
-import React from 'react';
 import { Box, Text } from 'ink';
 import { createHandleInput, isBackspace, isCancel, isPlainTextInput, isSubmit } from './input.js';
 import type { ModalContext, ModalInputProps, ModalRenderProps, ModalState } from './types.js';
@@ -48,16 +47,15 @@ export function render({ modal, context }: ModalRenderProps) {
   const subjectColor = context.selectedSubject?.color ?? '#3b82f6';
   const filteredLanguages = getFilteredLanguages(state);
   const rows = Math.max(1, Math.min(LANGUAGE_MODAL_MAX_ROWS, filteredLanguages.length));
-  const windowStart = Math.min(
-    Math.max(0, state.selected - rows + 1),
-    Math.max(0, filteredLanguages.length - rows),
-  );
+  const windowStart = Math.min(Math.max(0, state.selected - rows + 1), Math.max(0, filteredLanguages.length - rows));
   const visibleLanguages = filteredLanguages.slice(windowStart, windowStart + rows);
 
   return (
     <>
       <Box justifyContent="space-between" marginBottom={1}>
-        <Text color="#f0f0f0" bold>Select Language</Text>
+        <Text color="#f0f0f0" bold>
+          Select Language
+        </Text>
         <Text color="#777777">esc</Text>
       </Box>
       <Box marginBottom={1}>
@@ -68,21 +66,31 @@ export function render({ modal, context }: ModalRenderProps) {
       <Box flexDirection="column" marginBottom={1}>
         {filteredLanguages.length === 0 ? (
           <Text color="#777777">No languages found</Text>
-        ) : visibleLanguages.map((language, index) => {
-          const languageIndex = windowStart + index;
-          const isSelected = state.selected === languageIndex;
-          const isCurrent = context.session.studyLanguage === language;
+        ) : (
+          visibleLanguages.map((language, index) => {
+            const languageIndex = windowStart + index;
+            const isSelected = state.selected === languageIndex;
+            const isCurrent = context.session.studyLanguage === language;
 
-          return (
-            <Box key={language} backgroundColor={isSelected ? subjectColor : undefined} justifyContent="space-between">
-              <Text color={isSelected ? '#000000' : '#f0f0f0'} bold={isSelected}>{language}</Text>
-              {isCurrent && <Text color={isSelected ? '#000000' : '#22c55e'}>current</Text>}
-            </Box>
-          );
-        })}
+            return (
+              <Box
+                key={language}
+                backgroundColor={isSelected ? subjectColor : undefined}
+                justifyContent="space-between"
+              >
+                <Text color={isSelected ? '#000000' : '#f0f0f0'} bold={isSelected}>
+                  {language}
+                </Text>
+                {isCurrent && <Text color={isSelected ? '#000000' : '#22c55e'}>current</Text>}
+              </Box>
+            );
+          })
+        )}
       </Box>
       <Box justifyContent="space-between">
-        <Text color="#777777">↑↓ move {windowStart + 1}-{windowStart + visibleLanguages.length}/{filteredLanguages.length}</Text>
+        <Text color="#777777">
+          ↑↓ move {windowStart + 1}-{windowStart + visibleLanguages.length}/{filteredLanguages.length}
+        </Text>
         <Text color="#777777">enter select</Text>
       </Box>
     </>

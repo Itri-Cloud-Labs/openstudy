@@ -1,9 +1,9 @@
 import React from 'react';
 import { Box, Text, useInput } from 'ink';
 import { lexer, type Token, type Tokens } from 'marked';
-import { SUMMARY_LOADING_STEPS, type SummaryState } from '../../session/summary.js';
-import { THEME } from '../../theme.js';
-import { isTerminalMouseReport, parseMouseWheelScroll } from '../../utils/input.js';
+import { SUMMARY_LOADING_STEPS, type SummaryState } from './useSummary.js';
+import { THEME } from '../../../../shared/theme.js';
+import { isTerminalMouseReport, parseMouseWheelScroll } from '../../../../utils/input.js';
 
 type SummaryLine = {
   text: string;
@@ -29,7 +29,10 @@ export function SummaryMode({
 }: SummaryModeProps) {
   const [scroll, setScroll] = React.useState(0);
   const [animationFrame, setAnimationFrame] = React.useState(0);
-  const lines = React.useMemo(() => buildSummaryLines(summaryState, Math.max(1, contentWidth), animationFrame), [animationFrame, contentWidth, summaryState]);
+  const lines = React.useMemo(
+    () => buildSummaryLines(summaryState, Math.max(1, contentWidth), animationFrame),
+    [animationFrame, contentWidth, summaryState],
+  );
   const visibleRows = Math.max(1, contentHeight - 3);
   const maxScroll = Math.max(0, lines.length - visibleRows);
   const visibleLines = lines.slice(scroll, scroll + visibleRows);
@@ -59,75 +62,70 @@ export function SummaryMode({
     };
   }, [summaryState.status]);
 
-  useInput((input, key) => {
-    const mouseScroll = parseMouseWheelScroll(input);
-    if (mouseScroll !== 0) {
-      if (summaryState.status === 'ready' || summaryState.status === 'streaming') {
-        setScroll(current => Math.max(0, Math.min(maxScroll, current + mouseScroll)));
+  useInput(
+    (input, key) => {
+      const mouseScroll = parseMouseWheelScroll(input);
+      if (mouseScroll !== 0) {
+        if (summaryState.status === 'ready' || summaryState.status === 'streaming') {
+          setScroll(current => Math.max(0, Math.min(maxScroll, current + mouseScroll)));
+        }
+        return;
       }
-      return;
-    }
 
-    if (isTerminalMouseReport(input)) return;
-    if (summaryState.status !== 'ready' && summaryState.status !== 'streaming') return;
+      if (isTerminalMouseReport(input)) return;
+      if (summaryState.status !== 'ready' && summaryState.status !== 'streaming') return;
 
-    if (key.pageUp) {
-      setScroll(current => Math.max(0, current - visibleRows));
-      return;
-    }
+      if (key.pageUp) {
+        setScroll(current => Math.max(0, current - visibleRows));
+        return;
+      }
 
-    if (key.pageDown) {
-      setScroll(current => Math.min(maxScroll, current + visibleRows));
-      return;
-    }
+      if (key.pageDown) {
+        setScroll(current => Math.min(maxScroll, current + visibleRows));
+        return;
+      }
 
-    if (key.home) {
-      setScroll(0);
-      return;
-    }
+      if (key.home) {
+        setScroll(0);
+        return;
+      }
 
-    if (key.end) {
-      setScroll(maxScroll);
-      return;
-    }
+      if (key.end) {
+        setScroll(maxScroll);
+        return;
+      }
 
-    if (key.upArrow) {
-      setScroll(current => Math.max(0, current - 1));
-      return;
-    }
+      if (key.upArrow) {
+        setScroll(current => Math.max(0, current - 1));
+        return;
+      }
 
-    if (key.downArrow) {
-      setScroll(current => Math.min(maxScroll, current + 1));
-    }
-  }, { isActive: inputActive && !commandMenuActive });
+      if (key.downArrow) {
+        setScroll(current => Math.min(maxScroll, current + 1));
+      }
+    },
+    { isActive: inputActive && !commandMenuActive },
+  );
 
   return (
     <Box flexDirection="column">
       <Box marginTop={1} marginBottom={1} justifyContent="space-between">
-        <Text color={THEME.text} bold>Summary</Text>
+        <Text color={THEME.text} bold>
+          Summary
+        </Text>
         <Text color={THEME.textMuted}>{getSummaryStatusLabel(summaryState.status, maxScroll)}</Text>
       </Box>
 
       <Box height={visibleRows} flexDirection="row" overflow="hidden">
         <Box width={Math.max(1, contentWidth - (maxScroll > 0 ? 2 : 0))} flexDirection="column">
           {visibleLines.map((line, index) => (
-            <Text
-              key={`${scroll + index}:${line.text}`}
-              color={line.color}
-              bold={line.bold}
-              dimColor={line.dim}
-            >
+            <Text key={`${scroll + index}:${line.text}`} color={line.color} bold={line.bold} dimColor={line.dim}>
               {line.text || ' '}
             </Text>
           ))}
         </Box>
         {maxScroll > 0 && (
-          <ScrollBar
-            height={visibleRows}
-            scroll={scroll}
-            totalRows={lines.length}
-            visibleRows={visibleRows}
-          />
+          <ScrollBar height={visibleRows} scroll={scroll} totalRows={lines.length} visibleRows={visibleRows} />
         )}
       </Box>
     </Box>
@@ -168,7 +166,10 @@ function ScrollBar({
 
 function buildSummaryLines(summaryState: SummaryState, width: number, animationFrame: number): SummaryLine[] {
   if (summaryState.status === 'loading') {
-    const activeStepIndex = Math.max(0, SUMMARY_LOADING_STEPS.indexOf(summaryState.step as typeof SUMMARY_LOADING_STEPS[number]));
+    const activeStepIndex = Math.max(
+      0,
+      SUMMARY_LOADING_STEPS.indexOf(summaryState.step as (typeof SUMMARY_LOADING_STEPS)[number]),
+    );
     const dots = '.'.repeat((animationFrame % 3) + 1);
 
     return [
@@ -231,9 +232,7 @@ function buildMarkdownSummaryLines(markdown: string, width: number) {
   }
 
   const trimmedLines = trimBlankSummaryLines(lines);
-  return trimmedLines.length > 0
-    ? trimmedLines
-    : [{ text: ' ', color: THEME.textMuted }];
+  return trimmedLines.length > 0 ? trimmedLines : [{ text: ' ', color: THEME.textMuted }];
 }
 
 function appendMarkdownToken(lines: SummaryLine[], token: Token, width: number) {
@@ -361,12 +360,17 @@ function appendCodeBlock(lines: SummaryLine[], code: Tokens.Code, width: number)
 function appendTable(lines: SummaryLine[], table: Tokens.Table, width: number) {
   const rows = [table.header, ...table.rows];
   const columnWidths = table.header.map((_, columnIndex) => {
-    const widestCell = rows.reduce((widest, row) => Math.max(widest, inlineText(row[columnIndex]?.tokens ?? []).length), 0);
+    const widestCell = rows.reduce(
+      (widest, row) => Math.max(widest, inlineText(row[columnIndex]?.tokens ?? []).length),
+      0,
+    );
     return Math.min(Math.max(1, widestCell), Math.max(1, Math.floor(width / Math.max(1, table.header.length)) - 2));
   });
 
   rows.forEach((row, rowIndex) => {
-    const cells = row.map((cell, columnIndex) => truncate(inlineText(cell.tokens), columnWidths[columnIndex] ?? 8).padEnd(columnWidths[columnIndex] ?? 8));
+    const cells = row.map((cell, columnIndex) =>
+      truncate(inlineText(cell.tokens), columnWidths[columnIndex] ?? 8).padEnd(columnWidths[columnIndex] ?? 8),
+    );
     appendWrappedText(lines, cells.join('  ').trimEnd(), width, {
       color: rowIndex === 0 ? THEME.primary : THEME.text,
       bold: rowIndex === 0,
@@ -397,39 +401,41 @@ function trimBlankSummaryLines(lines: SummaryLine[]) {
 }
 
 function inlineText(tokens: Token[]): string {
-  return tokens.map(token => {
-    switch (token.type) {
-      case 'text':
-      case 'escape':
-      case 'codespan':
-      case 'html':
-        return 'text' in token && typeof token.text === 'string' ? token.text : '';
+  return tokens
+    .map(token => {
+      switch (token.type) {
+        case 'text':
+        case 'escape':
+        case 'codespan':
+        case 'html':
+          return 'text' in token && typeof token.text === 'string' ? token.text : '';
 
-      case 'strong':
-      case 'em':
-      case 'del':
-        return inlineText((token as Tokens.Strong | Tokens.Em | Tokens.Del).tokens);
+        case 'strong':
+        case 'em':
+        case 'del':
+          return inlineText((token as Tokens.Strong | Tokens.Em | Tokens.Del).tokens);
 
-      case 'link': {
-        const link = token as Tokens.Link;
-        const label = inlineText(link.tokens) || link.text;
-        return link.href ? `${label} (${link.href})` : label;
+        case 'link': {
+          const link = token as Tokens.Link;
+          const label = inlineText(link.tokens) || link.text;
+          return link.href ? `${label} (${link.href})` : label;
+        }
+
+        case 'image': {
+          const image = token as Tokens.Image;
+          return image.href ? `${image.text || 'image'} (${image.href})` : image.text;
+        }
+
+        case 'br':
+          return '\n';
+
+        default:
+          if ('tokens' in token && Array.isArray(token.tokens)) return inlineText(token.tokens);
+          if ('text' in token && typeof token.text === 'string') return token.text;
+          return '';
       }
-
-      case 'image': {
-        const image = token as Tokens.Image;
-        return image.href ? `${image.text || 'image'} (${image.href})` : image.text;
-      }
-
-      case 'br':
-        return '\n';
-
-      default:
-        if ('tokens' in token && Array.isArray(token.tokens)) return inlineText(token.tokens);
-        if ('text' in token && typeof token.text === 'string') return token.text;
-        return '';
-    }
-  }).join('');
+    })
+    .join('');
 }
 
 function appendStreamingIndicator(lines: SummaryLine[], animationFrame: number) {
@@ -450,18 +456,16 @@ function appendStreamingIndicator(lines: SummaryLine[], animationFrame: number) 
 }
 
 function wrapText(text: string, width: number) {
-  return text
-    .split('\n')
-    .flatMap(line => {
-      if (!line) return [''];
+  return text.split('\n').flatMap(line => {
+    if (!line) return [''];
 
-      const chunks: string[] = [];
-      for (let index = 0; index < line.length; index += width) {
-        chunks.push(line.slice(index, index + width));
-      }
+    const chunks: string[] = [];
+    for (let index = 0; index < line.length; index += width) {
+      chunks.push(line.slice(index, index + width));
+    }
 
-      return chunks.length > 0 ? chunks : [''];
-    });
+    return chunks.length > 0 ? chunks : [''];
+  });
 }
 
 function truncate(value: string, maxLength: number) {

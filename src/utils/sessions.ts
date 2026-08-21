@@ -1,96 +1,97 @@
-import fs from 'fs';
 import path from 'path';
-import { randomUUID } from 'crypto';
+import {
+  preferencesFromSessionSettings,
+  sessionSettingsFromDomain,
+  studySessionFromSettings,
+  type StudySession,
+} from '../domain/index.js';
 import type { SessionSettings } from '../types/index.js';
-import { CONFIG_DIR, DEFAULT_SESSION, loadSession, saveSession } from './config.js';
+import { CONFIG_DIR, DEFAULT_SESSION, getPersistence, loadSession, saveSession } from './config.js';
 
 const SESSION_FILENAME = 'session.json';
 
-function normalizeStoredSession(value: unknown, fallbackSessionId: string | null = null): SessionSettings {
-  const raw = value && typeof value === 'object' ? value as Partial<SessionSettings> : {};
-
-  return {
-    ...DEFAULT_SESSION,
-    ...raw,
-    sessionId: typeof raw.sessionId === 'string' && raw.sessionId.trim().length > 0 ? raw.sessionId : fallbackSessionId,
-    title: typeof raw.title === 'string' && raw.title.trim().length > 0 ? raw.title : null,
-    summaryText: typeof raw.summaryText === 'string' ? raw.summaryText : null,
-    createdDate: typeof raw.createdDate === 'string' ? raw.createdDate : null,
-    lastOpenedDate: typeof raw.lastOpenedDate === 'string' ? raw.lastOpenedDate : null,
-  };
-}
-
-export function getSessionDirectory(sessionId: string) {
+export function getSessionDirectory(sessionId: string): string {
   return path.join(CONFIG_DIR, sessionId);
 }
 
-export function getSessionFilePath(sessionId: string) {
+export function getSessionFilePath(sessionId: string): string {
   return path.join(getSessionDirectory(sessionId), SESSION_FILENAME);
 }
 
 export function getAllSession(): SessionSettings[] {
-  if (!fs.existsSync(CONFIG_DIR)) return [];
+  const persistence = getPersistence();
+  const providerConfig = persistence.readProviderConfig();
 
-  return fs.readdirSync(CONFIG_DIR, { withFileTypes: true })
-    .filter(entry => entry.isDirectory())
-    .map(entry => {
-      const sessionFilePath = getSessionFilePath(entry.name);
-      if (!fs.existsSync(sessionFilePath)) return null;
-
-      try {
-        const raw = fs.readFileSync(sessionFilePath, 'utf8');
-        return normalizeStoredSession(JSON.parse(raw), entry.name);
-      } catch {
-        return null;
-      }
-    })
-    .filter((session): session is SessionSettings => Boolean(session));
+  return persistence
+    .listStudySessions()
+    .map(session => sessionSettingsFromDomain(session.preferences, providerConfig, session));
 }
 
 export function getSessionById(sessionId: string): SessionSettings | null {
-  const sessionFilePath = getSessionFilePath(sessionId);
-  if (!fs.existsSync(sessionFilePath)) return null;
+  const persistence = getPersistence();
+  const session = persistence.readStudySession(sessionId);
+  if (!session) return null;
 
-  try {
-    const raw = fs.readFileSync(sessionFilePath, 'utf8');
-    return normalizeStoredSession(JSON.parse(raw), sessionId);
-  } catch {
-    return null;
-  }
+  const providerConfig = persistence.readProviderConfig() ?? persistence.readLegacySessionProviderConfig(sessionId);
+  return sessionSettingsFromDomain(session.preferences, providerConfig, session);
 }
 
 export function saveSessionById(sessionId: string, session: SessionSettings): SessionSettings {
-  const nextSession = normalizeStoredSession(session, sessionId);
-  const sessionDirectory = getSessionDirectory(sessionId);
-  fs.mkdirSync(sessionDirectory, { recursive: true });
-  fs.writeFileSync(getSessionFilePath(sessionId), JSON.stringify(nextSession, null, 2), 'utf8');
-  return nextSession;
+  const persistence = getPersistence();
+  const current = persistence.readStudySession(sessionId);
+  const timestamp = new Date().toISOString();
+  const domainSession = studySessionFromSettings({ ...session, sessionId }, sessionId, current?.createdAt ?? timestamp);
+  const saved = persistence.writeStudySession({
+    ...domainSession,
+    createdAt: session.createdDate ?? current?.createdAt ?? domainSession.createdAt,
+    lastOpenedAt: session.lastOpenedDate ?? current?.lastOpenedAt ?? domainSession.lastOpenedAt,
+    modeResults: {
+      ...(current?.modeResults ?? domainSession.modeResults),
+      summary: session.summaryText,
+    },
+  });
+
+  return sessionSettingsFromDomain(
+    saved.preferences,
+    persistence.readProviderConfig() ?? {
+      provider: session.provider,
+      apiKey: session.apiKey,
+    },
+    saved,
+  );
 }
 
 export function createSession(session: SessionSettings = DEFAULT_SESSION): SessionSettings {
+  const persistence = getPersistence();
   const homeSession = loadSession();
-  const sessionId = randomUUID();
-  const now = new Date().toISOString();
-
-  return saveSessionById(sessionId, {
-    ...DEFAULT_SESSION,
-    ...homeSession,
-    ...session,
-    sessionId,
+  const merged = { ...DEFAULT_SESSION, ...homeSession, ...session };
+  const created = persistence.createStudySession({
     title: null,
-    summaryText: null,
-    createdDate: now,
-    lastOpenedDate: now,
+    preferences: preferencesFromSessionSettings(merged),
   });
+
+  return sessionSettingsFromDomain(
+    created.preferences,
+    persistence.readProviderConfig() ?? {
+      provider: merged.provider,
+      apiKey: merged.apiKey,
+    },
+    created,
+  );
 }
 
 export function setSession(sessionId: string): SessionSettings | null {
-  const session = getSessionById(sessionId);
-  if (!session) return null;
+  const persistence = getPersistence();
+  const updated = persistence.touchStudySession(sessionId);
+  if (!updated) return null;
 
-  const now = new Date().toISOString();
-  const updated = saveSessionById(sessionId, { ...session, lastOpenedDate: now });
+  const providerConfig = persistence.readProviderConfig() ?? persistence.readLegacySessionProviderConfig(sessionId);
+  const compatibilitySession = sessionSettingsFromDomain(updated.preferences, providerConfig, updated);
 
-  saveSession(updated);
-  return updated;
+  saveSession(compatibilitySession);
+  return compatibilitySession;
+}
+
+export function saveDomainSession(session: StudySession): StudySession {
+  return getPersistence().writeStudySession(session);
 }

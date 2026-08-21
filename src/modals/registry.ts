@@ -1,20 +1,36 @@
-import fs from 'fs';
-import { fileURLToPath } from 'url';
-import type { ModalManifest, ModalModule } from './types.js';
+import { manifest as devtools } from './devtools.manifest.js';
+import { manifest as filepicker } from './filepicker.manifest.js';
+import { manifest as language } from './language.manifest.js';
+import { manifest as message } from './message.manifest.js';
+import { manifest as models } from './models.manifest.js';
+import { manifest as reasoning } from './reasoning.manifest.js';
+import { manifest as sessions } from './sessions.manifest.js';
+import { manifest as subjects } from './subjects.manifest.js';
+import type { ModalId, ModalManifest, ModalModule } from './types.js';
 
-const MANIFEST_PATTERN = /\.manifest\.(?:js|ts|tsx)$/;
+export const MODAL_REGISTRY = [
+  devtools,
+  filepicker,
+  language,
+  message,
+  models,
+  reasoning,
+  sessions,
+  subjects,
+] as const satisfies readonly ModalManifest[];
 
-let manifestPromise: Promise<ModalManifest[]> | null = null;
-const moduleCache = new Map<string, Promise<ModalModule>>();
+const moduleCache = new Map<ModalId, Promise<ModalModule>>();
 
 export async function loadModalManifests(): Promise<ModalManifest[]> {
-  manifestPromise ??= loadManifests();
-  return manifestPromise;
+  return [...MODAL_REGISTRY];
 }
 
-export async function loadModalModule(id: string): Promise<ModalModule | null> {
-  const manifests = await loadModalManifests();
-  const manifest = manifests.find(item => item.id === id);
+export function getModalManifest(id: ModalId): ModalManifest | null {
+  return MODAL_REGISTRY.find(manifest => manifest.id === id) ?? null;
+}
+
+export async function loadModalModule(id: ModalId): Promise<ModalModule | null> {
+  const manifest = getModalManifest(id);
   if (!manifest) return null;
 
   let pending = moduleCache.get(id);
@@ -24,22 +40,4 @@ export async function loadModalModule(id: string): Promise<ModalModule | null> {
   }
 
   return pending;
-}
-
-async function loadManifests(): Promise<ModalManifest[]> {
-  const directory = fileURLToPath(new URL('.', import.meta.url));
-  const entries = fs.readdirSync(directory)
-    .filter(entry => MANIFEST_PATTERN.test(entry) && !entry.endsWith('.d.ts'))
-    .sort();
-
-  const manifests = await Promise.all(entries.map(async entry => {
-    const module = await import(new URL(entry, import.meta.url).href) as {
-      manifest?: ModalManifest;
-      default?: ModalManifest;
-    };
-
-    return module.manifest ?? module.default ?? null;
-  }));
-
-  return manifests.filter((manifest): manifest is ModalManifest => manifest !== null);
 }

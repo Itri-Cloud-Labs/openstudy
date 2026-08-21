@@ -8,17 +8,40 @@ export interface SelectedModel {
   name: string;
 }
 
+export type ModalId =
+  | 'devtools'
+  | 'filepicker'
+  | 'language'
+  | 'message'
+  | 'models'
+  | 'reasoning'
+  | 'sessions'
+  | 'subjects';
+
+export interface ModalInitialStateMap {
+  devtools: undefined;
+  filepicker: undefined;
+  language: undefined;
+  message: { title?: string; message?: string };
+  models: undefined;
+  reasoning: undefined;
+  sessions: undefined;
+  subjects: undefined;
+}
+
+export type OpenModal = <Id extends ModalId>(id: Id, initialState?: ModalInitialStateMap[Id]) => void | Promise<void>;
+
 export type ModalScreen = 'home' | 'session';
 
 export interface ModalState {
-  id: string;
+  id: ModalId;
   [key: string]: unknown;
 }
 
 export type ModalInputKey = Parameters<Parameters<typeof useInput>[0]>[1];
 
 export interface ModalTrigger {
-  id: string;
+  id: ModalId;
   key: string;
   label: string;
   description: string;
@@ -33,7 +56,7 @@ export interface ModalContext {
   config: Config | null;
   selectedSubject: SubjectOption | null;
   selectedModel: SelectedModel | null;
-  openModal: (id: string, initialState?: Record<string, unknown>) => void | Promise<void>;
+  openModal: OpenModal;
   closeModal: () => void;
   updateModal: (updater: ModalState | ((current: ModalState) => ModalState)) => void;
   updateSettings: (patch: Partial<SessionSettings>) => SessionSettings;
@@ -41,14 +64,17 @@ export interface ModalContext {
 }
 
 export interface ModalModule {
-  open: (context: ModalContext, initialState?: Record<string, unknown>) => ModalState | null | Promise<ModalState | null>;
+  open: (
+    context: ModalContext,
+    initialState?: Record<string, unknown>,
+  ) => ModalState | null | Promise<ModalState | null>;
   getHeight: (modal: ModalState) => number;
   render: (props: ModalRenderProps) => React.ReactNode;
   handleInput?: (props: ModalInputProps) => boolean;
 }
 
-export interface ModalManifest {
-  id: string;
+export interface ModalManifest<Id extends ModalId = ModalId> {
+  id: Id;
   Screen: ModalScreen | null;
   trigger?: ModalTrigger;
   load: () => Promise<ModalModule>;
@@ -71,7 +97,7 @@ export interface ModalInputProps {
 }
 
 export interface ActiveModal {
-  id: string;
+  id: ModalId;
   module: ModalModule;
   state: ModalState;
 }

@@ -1,6 +1,7 @@
 import React from 'react';
-import { Box, Text, useStdout } from 'ink';
-import { Logo } from './Logo.js';
+import { Box, Text } from 'ink';
+import { Logo } from '../shared/ui/Logo.js';
+import { useTerminalSize } from '../shared/hooks/useTerminalSize.js';
 
 const LOADING_FRAMES = ['|', '/', '-', '\\'];
 const TROLL_MESSAGES = [
@@ -17,11 +18,9 @@ interface LoadingScreenProps {
 }
 
 export const LoadingScreen: React.FC<LoadingScreenProps> = ({ firstLaunch = false, preloadReady = false }) => {
-  const { stdout } = useStdout();
+  const terminal = useTerminalSize();
   const [frame, setFrame] = React.useState(0);
   const [messageIndex, setMessageIndex] = React.useState(0);
-  const termWidth = stdout?.columns ?? process.stdout.columns ?? 80;
-  const termHeight = stdout?.rows ?? process.stdout.rows ?? 24;
 
   React.useEffect(() => {
     const id = setInterval(() => {
@@ -42,12 +41,26 @@ export const LoadingScreen: React.FC<LoadingScreenProps> = ({ firstLaunch = fals
   }, [firstLaunch, preloadReady]);
 
   return (
-    <Box position="absolute" top={0} left={0} width={termWidth} height={termHeight} flexDirection="column" alignItems="center" justifyContent="center" backgroundColor="#000000">
+    <Box
+      position="absolute"
+      top={0}
+      left={0}
+      width={terminal.width}
+      height={terminal.height}
+      flexDirection="column"
+      alignItems="center"
+      justifyContent="center"
+      backgroundColor="#000000"
+    >
       <Box marginBottom={2}>
         <Logo />
       </Box>
-      <Text color="#f0a500" bold>{LOADING_FRAMES[frame]} Loading OpenStudy</Text>
-      <Text color="#555555">{firstLaunch && preloadReady ? TROLL_MESSAGES[messageIndex] : 'Preparing commands and modals...'}</Text>
+      <Text color="#f0a500" bold>
+        {LOADING_FRAMES[frame]} Loading OpenStudy
+      </Text>
+      <Text color="#555555">
+        {firstLaunch && preloadReady ? TROLL_MESSAGES[messageIndex] : 'Preparing commands and modals...'}
+      </Text>
     </Box>
   );
 };
