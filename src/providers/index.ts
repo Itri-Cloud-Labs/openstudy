@@ -1,53 +1,30 @@
-import type { Provider } from '../domain/provider.js';
-import { CodexProvider, OpenCodeProvider, providerRegistry } from '../infrastructure/providers/index.js';
-import type { AIProvider, ProviderDefinition } from './types.js';
+import { isProvider, type Provider } from '../domain/provider.js';
+import { CodexProvider, disposeCodexProvider } from './codex-provider.js';
+import type { StudyProvider } from './contracts.js';
+import { disposeOpenCodeProvider, OpenCodeProvider } from './opencode-provider.js';
 
-export type { Provider, ProviderConfig } from '../domain/provider.js';
-export {
-  CODEX_LOGIN_REQUIRED_MESSAGE,
-  CODEX_MODEL_OPTIONS,
-  CODEX_MODELS,
-  CONTEXT_OVERFLOW_MESSAGE,
-  type CodexPromptOptions,
-  CodexProvider,
-  disposeCodexProvider as closeCodexProvider,
-  disposeOpenCodeProvider as closeOpenCodeProvider,
-  normalizeProviderError,
-  OPENCODE_LOGIN_REQUIRED_MESSAGE,
-  OPENCODE_MODEL_OPTIONS,
-  OPENCODE_MODELS,
-  OpenCodeProvider,
-  PROVIDER_METADATA,
-  ProviderRegistry,
-  providerRegistry,
-} from '../infrastructure/providers/index.js';
+export { PROVIDER_METADATA } from './metadata.js';
 export type {
-  AIProvider,
-  ProviderDefinition,
   ProviderMetadata,
   ProviderModelOption,
   ProviderPromptFile,
   ProviderPromptOptions,
-  ProviderPromptStreamEvent,
+  ProviderPromptResult,
   ProviderReasoningLevel,
-  ProviderRegistration,
   StudyProvider,
-} from './types.js';
+} from './contracts.js';
 
-export function getAvailableProviders(): ProviderDefinition[] {
-  return providerRegistry.listMetadata();
-}
+const factories = {
+  codex: () => new CodexProvider(),
+  opencode: () => new OpenCodeProvider(),
+} as const satisfies Record<Provider, () => StudyProvider>;
 
-export function getProviderDefinition(id: string): ProviderDefinition | null {
-  return providerRegistry.getMetadata(id);
-}
-
-export function createProvider(id: Provider): AIProvider;
-export function createProvider(id: string): AIProvider | null;
-export function createProvider(id: string): AIProvider | null {
-  return providerRegistry.create(id);
+export function createProvider(id: Provider): StudyProvider;
+export function createProvider(id: string): StudyProvider | null;
+export function createProvider(id: string): StudyProvider | null {
+  return isProvider(id) ? factories[id]() : null;
 }
 
 export async function closeProviders(): Promise<void> {
-  await providerRegistry.disposeAll();
+  await Promise.all([disposeCodexProvider(), disposeOpenCodeProvider()]);
 }

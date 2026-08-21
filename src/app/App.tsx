@@ -9,7 +9,7 @@ import { useModalManager } from '../features/modals/useModalManager.js';
 import { loadModalManifests } from '../modals/registry.js';
 import type { ModalScreen, SelectedModel } from '../modals/types.js';
 import { subjects, type SubjectOption } from '../options/index.js';
-import { createProvider, getProviderDefinition } from '../providers/index.js';
+import { createProvider, PROVIDER_METADATA } from '../providers/index.js';
 import { useTerminalSize } from '../shared/hooks/useTerminalSize.js';
 import { formatMaterialLabel, shortenHomePath } from '../shared/text.js';
 import { useTerminalSurface } from '../shared/terminal/useTerminalSurface.js';
@@ -195,11 +195,9 @@ function StudyWorkspace({ route, commands, inputDisabled, onExit, onRouteChange 
   );
 
   const selectedModelLabel = selectedModel
-    ? `${getProviderDefinition(selectedModel.provider)?.label ?? selectedModel.provider}/${selectedModel.name}`
+    ? `${getProviderLabel(selectedModel.provider)}/${selectedModel.name}`
     : 'Provider/Model';
-  const selectedProviderLabel = selectedModel
-    ? (getProviderDefinition(selectedModel.provider)?.label ?? selectedModel.provider)
-    : 'Provider';
+  const selectedProviderLabel = selectedModel ? getProviderLabel(selectedModel.provider) : 'Provider';
   const reasoningLabel = session.reasoningEffort ?? 'Default';
   const materialLabel = formatMaterialLabel(session.material);
   const languageLabel = session.studyLanguage ?? 'Study Language';
@@ -320,8 +318,12 @@ function hasCompleteSessionOptions(
 
 function modelRequiresReasoning(selectedModel: SelectedModel): boolean {
   const provider = createProvider(selectedModel.provider);
-  const option = provider?.GetModels().find(model => model.model === selectedModel.name);
+  const option = provider?.getModels().find(model => model.model === selectedModel.name);
   return Boolean(option && option.reasoningLevels.length > 0);
+}
+
+function getProviderLabel(provider: Provider): string {
+  return PROVIDER_METADATA.find(metadata => metadata.id === provider)?.label ?? provider;
 }
 
 function getSessionPromptTitle(session: SessionSettings): string {

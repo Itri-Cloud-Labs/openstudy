@@ -1,9 +1,9 @@
 import type { Provider, ProviderConfig } from '../domain/provider.js';
-import { PROVIDER_METADATA } from '../infrastructure/providers/index.js';
+import { PROVIDER_METADATA } from '../providers/index.js';
 
 export type { Provider, ProviderConfig } from '../domain/provider.js';
 export type { SessionSettings } from '../domain/study.js';
-export type { ProviderMetadata as ProviderMeta } from '../infrastructure/providers/contracts.js';
+export type { ProviderMetadata as ProviderMeta } from '../providers/contracts.js';
 
 export interface Config extends ProviderConfig {
   provider: Provider;

@@ -1,11 +1,11 @@
 import { Box, Text } from 'ink';
 import {
   createProvider,
-  getAvailableProviders,
-  type ProviderDefinition,
+  PROVIDER_METADATA,
+  type ProviderMetadata,
   type ProviderModelOption,
 } from '../providers/index.js';
-import type { Provider } from '../types/index.js';
+import type { Provider } from '../domain/provider.js';
 import { focusTextColor } from '../utils/index.js';
 import { createHandleInput, isBackspace, isCancel, isPlainTextInput, isSubmit } from './input.js';
 import type { ModalContext, ModalInputProps, ModalRenderContext, ModalRenderProps, ModalState } from './types.js';
@@ -13,7 +13,7 @@ import type { ModalContext, ModalInputProps, ModalRenderContext, ModalRenderProp
 const MODEL_MODAL_MAX_ROWS = 6;
 const SPINNER_FRAMES = ['|', '/', '-', '\\'];
 
-type ModelProviderDefinition = ProviderDefinition & { id: Provider };
+type ModelProviderDefinition = ProviderMetadata & { id: Provider };
 type ProviderAuthStatus = { state: 'checking' } | { state: 'ready' } | { state: 'blocked'; message: string };
 type ProviderAuthById = Partial<Record<Provider, ProviderAuthStatus>>;
 
@@ -677,13 +677,13 @@ function openNextForProvider(provider: Provider, context: ModalRenderContext, au
 }
 
 function getModelProviders(): ModelProviderDefinition[] {
-  return getAvailableProviders() as ModelProviderDefinition[];
+  return PROVIDER_METADATA.map(metadata => ({ ...metadata }));
 }
 
 function getProviderModelOptions(provider: Provider, subProvider?: string | null): ProviderModelOption[] {
   const instance = createProvider(provider);
   if (!instance) return [];
-  const models = instance.GetModels();
+  const models = instance.getModels();
   if (!subProvider) return models;
   return models.filter(m => m.group?.id === subProvider);
 }

@@ -1,14 +1,14 @@
 import { spawn } from 'node:child_process';
 import { createRequire } from 'node:module';
 import path from 'node:path';
-import { jsonSchema, Output, streamText } from 'ai';
+import { jsonSchema, Output, generateText } from 'ai';
 import { createCodexAppServer } from 'ai-sdk-provider-codex-cli';
 import type {
-  LegacyCompatibleStudyProvider,
   ProviderModelOption,
   ProviderPromptOptions,
-  ProviderPromptStreamEvent,
+  ProviderPromptResult,
   ProviderReasoningLevel,
+  StudyProvider,
 } from './contracts.js';
 import { normalizeProviderError, throwIfProviderAborted } from './errors.js';
 import { buildMaterialPrompt, isRemoteMaterial, resolvePromptFiles } from './material-prompt.js';
@@ -101,7 +101,7 @@ export interface CodexPromptOptions extends ProviderPromptOptions {
   sandboxMode?: 'read-only' | 'workspace-write' | 'danger-full-access';
 }
 
-export class CodexProvider implements LegacyCompatibleStudyProvider<'codex'> {
+export class CodexProvider implements StudyProvider<'codex'> {
   readonly id = 'codex';
   readonly label = 'Codex';
 
@@ -141,13 +141,11 @@ export class CodexProvider implements LegacyCompatibleStudyProvider<'codex'> {
     if (result.exitCode !== 0) throw new Error(CODEX_LOGIN_REQUIRED_MESSAGE);
   }
 
-  async listModels(signal?: AbortSignal): Promise<ProviderModelOption[]> {
-    throwIfProviderAborted(signal);
+  getModels(): ProviderModelOption[] {
     return cloneModelOptions(CODEX_MODEL_OPTIONS);
   }
 
-  async *streamPrompt(input: string, options: CodexPromptOptions = {}): AsyncGenerator<ProviderPromptStreamEvent> {
-    yield { type: 'status', text: 'Checking login' };
+  async prompt(input: string, options: CodexPromptOptions = {}): Promise<ProviderPromptResult> {
     await this.checkAuth(options.signal);
 
     const files = resolvePromptFiles(options);
@@ -171,52 +169,33 @@ export class CodexProvider implements LegacyCompatibleStudyProvider<'codex'> {
     const prompt = buildMaterialPrompt(input, files);
     const structured = Boolean(options.responseSchema);
 
-    yield { type: 'status', text: 'Starting session' };
+    try {
+      const result = await generateText({
+        model: codexAppServer(options.model ?? DEFAULT_MODEL, {
+          cwd: workingDirectory,
+          approvalPolicy: options.approvalPolicy ?? DEFAULT_APPROVAL_POLICY,
+          sandboxPolicy: options.sandboxMode ?? 'read-only',
+          effort: reasoningEffort,
+        }),
+        prompt,
+        abortSignal: options.signal,
+        ...(structured ? { output: Output.object({ schema: jsonSchema(options.responseSchema) }) } : {}),
+        providerOptions,
+      });
 
-    const result = streamText({
-      model: codexAppServer(options.model ?? DEFAULT_MODEL, {
-        cwd: workingDirectory,
-        approvalPolicy: options.approvalPolicy ?? DEFAULT_APPROVAL_POLICY,
-        sandboxPolicy: options.sandboxMode ?? 'read-only',
-        effort: reasoningEffort,
-      }),
-      prompt,
-      abortSignal: options.signal,
-      ...(structured ? { output: Output.object({ schema: jsonSchema(options.responseSchema) }) } : {}),
-      providerOptions,
-    });
-
-    let hasResponse = false;
-    let responseText = '';
-    yield { type: 'status', text: structured ? 'Waiting for structured response' : 'Waiting for response' };
-
-    for await (const part of result.fullStream) {
-      if (part.type === 'error') {
-        throw normalizeProviderError(part.error, {
-          authMessage: CODEX_LOGIN_REQUIRED_MESSAGE,
-          signal: options.signal,
-        });
-      }
-
-      if (!hasResponse && (part.type === 'reasoning-start' || part.type === 'reasoning-delta')) {
-        yield { type: 'status', text: 'Analyzing key ideas' };
-        continue;
-      }
-
-      if (part.type === 'text-delta') {
-        hasResponse = true;
-        responseText += part.text;
-        yield { type: 'response', text: responseText };
-      }
+      const text = result.text.trim();
+      if (!text) throw new Error('The provider returned an empty response.');
+      return { text };
+    } catch (error) {
+      throw normalizeProviderError(error, {
+        authMessage: CODEX_LOGIN_REQUIRED_MESSAGE,
+        signal: options.signal,
+      });
     }
   }
 
   async dispose(): Promise<void> {
     await disposeCodexProvider();
-  }
-
-  GetModels(): ProviderModelOption[] {
-    return cloneModelOptions(CODEX_MODEL_OPTIONS);
   }
 }
 

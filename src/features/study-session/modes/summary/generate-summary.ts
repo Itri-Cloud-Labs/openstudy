@@ -1,6 +1,6 @@
-import type { AIProvider } from '../../../../providers/index.js';
-import { summarySystemPrompt } from '../../../../prompts/summary.js';
 import type { ResolvedMaterial } from '../../../../infrastructure/materials/index.js';
+import type { StudyProvider } from '../../../../providers/index.js';
+import { summarySystemPrompt } from '../../../../prompts/summary.js';
 import { parseSummaryPayload, type SummaryPayload } from './summary-payload.js';
 
 export const SUMMARY_RESPONSE_SCHEMA = {
@@ -14,7 +14,7 @@ export const SUMMARY_RESPONSE_SCHEMA = {
 } as const;
 
 export interface GenerateSummaryRequest {
-  provider: AIProvider;
+  provider: StudyProvider;
   model: string;
   reasoningEffort?: string;
   material: ResolvedMaterial;
@@ -22,16 +22,8 @@ export interface GenerateSummaryRequest {
   signal?: AbortSignal;
 }
 
-export type SummaryGenerationEvent =
-  | { type: 'status'; step: string }
-  | { type: 'partial'; summary: SummaryPayload }
-  | { type: 'complete'; summary: SummaryPayload };
-
-export async function* generateSummary(request: GenerateSummaryRequest): AsyncGenerator<SummaryGenerationEvent> {
-  let latestResponse = '';
-  let latestSummary: SummaryPayload | null = null;
-
-  for await (const event of request.provider.streamPrompt(buildSummaryUserPrompt(request.studyLanguage), {
+export async function generateSummary(request: GenerateSummaryRequest): Promise<SummaryPayload> {
+  const { text } = await request.provider.prompt(buildSummaryUserPrompt(request.studyLanguage), {
     system: summarySystemPrompt,
     model: request.model,
     reasoningEffort: request.reasoningEffort,
@@ -39,26 +31,11 @@ export async function* generateSummary(request: GenerateSummaryRequest): AsyncGe
     workingDirectory: request.material.workingDirectory,
     file: request.material.location,
     responseSchema: SUMMARY_RESPONSE_SCHEMA,
-  })) {
-    if (request.signal?.aborted) return;
+  });
 
-    if (event.type === 'status') {
-      if (!latestResponse) yield { type: 'status', step: event.text };
-      continue;
-    }
-
-    latestResponse = event.text;
-    const parsed = parseSummaryPayload(latestResponse);
-    if (!parsed?.content) continue;
-
-    latestSummary = parsed;
-    yield { type: 'partial', summary: parsed };
-  }
-
-  if (request.signal?.aborted) return;
-  const complete = parseSummaryPayload(latestResponse) ?? latestSummary;
-  if (!complete?.content) throw new Error('No summary was generated.');
-  yield { type: 'complete', summary: complete };
+  const summary = parseSummaryPayload(text);
+  if (!summary?.content) throw new Error('No summary was generated.');
+  return summary;
 }
 
 export function buildSummaryUserPrompt(language: string): string {

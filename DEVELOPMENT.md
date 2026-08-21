@@ -57,11 +57,12 @@ npm run reset:all -- --yes
 - `src/app` owns routes and composes the application's services and feature screens.
 - `src/domain` contains provider, material, preference, and study-session types. It has no React or filesystem code.
 - `src/features` groups home, setup, modal management, and study-session code by product feature.
-- `src/infrastructure` contains provider adapters, material I/O, and versioned persistence.
+- `src/infrastructure` contains material I/O and versioned persistence.
 - `src/shared` contains reusable Ink controls, terminal hooks, theme values, text helpers, and package metadata.
+- `src/providers` contains the single `StudyProvider` contract, one adapter per backend, provider metadata, and the factory map in `index.ts`. `prompt` resolves once with the final response text; there is no streaming.
 - `src/modals` contains modal state machines and the typed static registry. Manifests describe shortcuts and screen scope.
 - `src/commands` contains slash commands and their typed context.
-- `src/providers`, `src/session`, `src/components`, `src/types`, and `src/utils` are compatibility entry points. New implementation code belongs in the folders above.
+- `src/session`, `src/types`, and `src/utils` are compatibility entry points. New implementation code belongs in the folders above.
 - `src/prompts` contains plain study-mode system prompts. Do not add schemas or runtime code there.
 - `tests` contains Node test-runner suites written in TypeScript.
 - `scripts` contains cross-platform maintenance and package checks.
