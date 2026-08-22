@@ -1,4 +1,4 @@
-import { Box, Text } from 'ink';
+import { TextAttributes } from '@opentui/core';
 import { createHandleInput, isBackspace, isCancel, isPlainTextInput, isSubmit } from './input.js';
 import type { ModalContext, ModalInputProps, ModalRenderProps } from './types.js';
 import { THEME } from '../shared/theme.js';
@@ -53,20 +53,22 @@ export function render({ modal, context }: ModalRenderProps<LanguageModalState>)
 
   return (
     <>
-      <Box justifyContent="space-between" marginBottom={1}>
-        <Text color={THEME.text} bold>
+      <box style={{ justifyContent: 'space-between', marginBottom: 1 }}>
+        <text fg={THEME.text} attributes={TextAttributes.BOLD}>
           Select Language
-        </Text>
-        <Text color={THEME.textMuted}>esc</Text>
-      </Box>
-      <Box marginBottom={1}>
-        <Text color={THEME.textMuted}>Search </Text>
-        <Text color={THEME.text}>{state.filter}</Text>
-        <Text color={subjectColor}>█</Text>
-      </Box>
-      <Box flexDirection="column" marginBottom={1}>
+        </text>
+        <text fg={THEME.textMuted}>esc</text>
+      </box>
+      <box style={{ marginBottom: 1 }}>
+        <text>
+          <span fg={THEME.textMuted}>Search </span>
+          <span fg={THEME.text}>{state.filter}</span>
+          <span fg={subjectColor}>█</span>
+        </text>
+      </box>
+      <box style={{ flexDirection: 'column', marginBottom: 1 }}>
         {filteredLanguages.length === 0 ? (
-          <Text color={THEME.textMuted}>No languages found</Text>
+          <text fg={THEME.textMuted}>No languages found</text>
         ) : (
           visibleLanguages.map((language, index) => {
             const languageIndex = windowStart + index;
@@ -74,26 +76,31 @@ export function render({ modal, context }: ModalRenderProps<LanguageModalState>)
             const isCurrent = context.preferences.studyLanguage === language;
 
             return (
-              <Box
+              <box
                 key={language}
-                backgroundColor={isSelected ? subjectColor : undefined}
-                justifyContent="space-between"
+                style={{
+                  backgroundColor: isSelected ? subjectColor : undefined,
+                  justifyContent: 'space-between',
+                }}
               >
-                <Text color={isSelected ? THEME.onAccent : THEME.text} bold={isSelected}>
+                <text
+                  fg={isSelected ? THEME.onAccent : THEME.text}
+                  attributes={isSelected ? TextAttributes.BOLD : TextAttributes.NONE}
+                >
                   {language}
-                </Text>
-                {isCurrent && <Text color={isSelected ? THEME.onAccent : THEME.success}>current</Text>}
-              </Box>
+                </text>
+                {isCurrent && <text fg={isSelected ? THEME.onAccent : THEME.success}>current</text>}
+              </box>
             );
           })
         )}
-      </Box>
-      <Box justifyContent="space-between">
-        <Text color={THEME.textMuted}>
-          ↑↓ move {windowStart + 1}-{windowStart + visibleLanguages.length}/{filteredLanguages.length}
-        </Text>
-        <Text color={THEME.textMuted}>enter select</Text>
-      </Box>
+      </box>
+      <box style={{ justifyContent: 'space-between' }}>
+        <text fg={THEME.textMuted}>
+          {`↑↓ move ${windowStart + 1}-${windowStart + visibleLanguages.length}/${filteredLanguages.length}`}
+        </text>
+        <text fg={THEME.textMuted}>enter select</text>
+      </box>
     </>
   );
 }

@@ -1,5 +1,5 @@
 import React from 'react';
-import { Box, Text } from 'ink';
+import { TextAttributes } from '@opentui/core';
 import { Logo } from './Logo.js';
 import { useTerminalSize } from '../hooks/useTerminalSize.js';
 import { THEME } from '../theme.js';
@@ -18,7 +18,7 @@ interface LoadingScreenProps {
   preloadReady?: boolean;
 }
 
-export const LoadingScreen: React.FC<LoadingScreenProps> = ({ firstLaunch = false, preloadReady = false }) => {
+export const LoadingScreen = ({ firstLaunch = false, preloadReady = false }: LoadingScreenProps) => {
   const terminal = useTerminalSize();
   const [frame, setFrame] = React.useState(0);
   const [messageIndex, setMessageIndex] = React.useState(0);
@@ -42,26 +42,29 @@ export const LoadingScreen: React.FC<LoadingScreenProps> = ({ firstLaunch = fals
   }, [firstLaunch, preloadReady]);
 
   return (
-    <Box
-      position="absolute"
-      top={0}
-      left={0}
-      width={terminal.width}
-      height={terminal.height}
-      flexDirection="column"
-      alignItems="center"
-      justifyContent="center"
-      backgroundColor={THEME.background}
+    <box
+      style={{
+        position: 'absolute',
+        top: 0,
+        left: 0,
+        width: terminal.width,
+        height: terminal.height,
+        flexDirection: 'column',
+        alignItems: 'center',
+        justifyContent: 'center',
+        backgroundColor: THEME.background,
+        zIndex: 50,
+      }}
     >
-      <Box marginBottom={2}>
+      <box style={{ marginBottom: 2 }}>
         <Logo />
-      </Box>
-      <Text color={THEME.primary} bold>
-        {LOADING_FRAMES[frame]} Loading OpenStudy
-      </Text>
-      <Text color={THEME.textFaint}>
+      </box>
+      <text fg={THEME.primary} attributes={TextAttributes.BOLD}>
+        {`${LOADING_FRAMES[frame]} Loading OpenStudy`}
+      </text>
+      <text fg={THEME.textFaint}>
         {firstLaunch && preloadReady ? TROLL_MESSAGES[messageIndex] : 'Preparing commands and modals...'}
-      </Text>
-    </Box>
+      </text>
+    </box>
   );
 };

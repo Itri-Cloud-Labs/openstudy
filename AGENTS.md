@@ -11,7 +11,7 @@ The intended experience is local-first, keyboard-driven, calm, and focused. User
 ## Current Product Direction
 
 - Keep the app centered on studying, not general software-agent workflows.
-- Preserve the terminal-native feel. Avoid web-app concepts that do not map cleanly to Ink.
+- Preserve the terminal-native feel. Avoid web-app concepts that do not map cleanly to OpenTUI renderables.
 - Favor fast keyboard shortcuts and visible controls over hidden flows.
 - Keep onboarding simple. First launch should guide users into setup without clutter.
 - Keep settings local under `~/.openstudy` unless a future requirement explicitly changes this.
@@ -43,8 +43,8 @@ The intended experience is local-first, keyboard-driven, calm, and focused. User
 - If the right sidebar is hidden on narrower terminals, the core session should still be usable. Do not put required actions only in the sidebar.
 - Input areas should feel stable. Avoid layout jumps while typing unless additional lines are genuinely needed. Keep cursor behavior simple and legible.
 - Avoid chat-app assumptions unless the feature explicitly requires chat behavior. OpenStudy is a study session interface first, not a generic assistant transcript.
-- Follow existing Ink patterns in `src/components` and `src/modals` before introducing abstractions. New components should earn their existence by reducing duplication or clarifying intent.
-- Prefer small, readable UI components over generalized layout systems. Ink layout can become fragile quickly, so keep alignment and sizing logic local when possible.
+- Follow existing OpenTUI patterns in `src/features` and `src/modals` before introducing abstractions. New components should earn their existence by reducing duplication or clarifying intent.
+- Prefer small, readable UI components over generalized layout systems. Layout state can become fragile quickly, so keep alignment and sizing logic local when possible.
 - Use plain text labels for early feature scaffolding. Do not design polished empty states, tab panels, cards, or metrics before the underlying behavior exists.
 - Do not add animations, spinners, progress meters, or live status indicators unless they reflect real work in progress. Fake activity makes the app feel noisy and less trustworthy.
 - Loading states should be calm and purposeful. The first-launch load may be more visible, but normal loading should avoid stealing focus from the main UI.
@@ -52,18 +52,18 @@ The intended experience is local-first, keyboard-driven, calm, and focused. User
 - Study material labels should be compact. Long paths and URLs should be truncated in a way that preserves useful identifying information.
 - Settings should be visible enough to confirm the session context, but changing settings should not feel like the main task. The user came to study, not configure software.
 - Preserve current shortcuts unless explicitly asked to change them. If a shortcut conflicts with terminal behavior, choose a reliable terminal-friendly shortcut and update all visible hints.
-- Be careful with `ctrl+m`: many terminals report it as Enter. Do not use it for in-session behavior unless the input layer can distinguish it reliably.
+- Be careful with `ctrl+m`: on legacy terminals it still reports as Enter (only Kitty-keyboard mode disambiguates it). The home prompt keeps an enter-on-empty fallback for the models modal; do not rely on ctrl+m for in-session behavior.
 - When adding new UI, test mentally against a small terminal, a wide terminal, first launch, configured state, missing configuration, and active session state.
 - Documentation and code should agree on the product language. Use `mode` for study flows inside sessions and avoid introducing competing terms such as tabs, agents, panels, or workspaces unless requested.
 - The overall feel should be like a focused study desk: a prompt, selected materials, a helpful mode, and quiet context. Remove anything that feels like admin software, analytics software, or generic agent tooling.
 
 ## Architecture Overview
 
-- `src/index.tsx`: app entrypoint, loading orchestration, alternate-screen render.
-- `src/components`: primary reusable Ink UI components.
-- `src/components/HomeScreen.tsx`: main screen, keyboard bindings, modal triggers, prompt configuration, terminal sizing.
-- `src/components/SessionScreen.tsx`: active study session screen, bottom prompt input, right sidebar, and mode rotation.
-- `src/components/SetupScreen.tsx`: first-run/setup flow for provider configuration.
+- `src/index.tsx`: app entrypoint; creates the OpenTUI CLI renderer (alternate screen), wires signals and provider disposal.
+- `src/shared/ui`: primary reusable UI components (prompt, logo, loading screen).
+- `src/features/home/HomeScreen.tsx`: main screen, modal triggers, prompt configuration.
+- `src/features/study-session/SessionScreen.tsx`: active study session screen, bottom prompt input, right sidebar, and mode rotation.
+- `src/features/setup/SetupScreen.tsx`: first-run/setup flow for provider configuration.
 - `src/modals`: modal modules and manifests. Each modal should have a manifest when it is user-triggerable.
 - `src/commands`: slash command modules loaded dynamically by `loadCommands`.
 - `src/providers`: the single `StudyProvider` contract (`checkAuth`, `getModels`, `prompt`, `dispose`), one adapter per backend, provider metadata, and the factory map. Prompts resolve once with final text; do not reintroduce streaming events or status callbacks.
@@ -98,12 +98,13 @@ The intended experience is local-first, keyboard-driven, calm, and focused. User
 
 ## Development Workflow
 
-- Package manager: `npm`.
+- Package manager: `npm` scripts executed with Bun available (`bun test`, `bun run`).
+- Runtime: Bun >=1.3 (OpenTUI requirement).
 - Development command: `npm run dev`.
 - Build command: `npm run build`.
 - Start compiled app: `npm start`.
 - Reset local config: `npm run reset`.
-- TypeScript is strict and uses ES modules.
+- TypeScript is strict and uses ES modules; JSX runs through the `@opentui/react` reconciler.
 - Prefer small, direct changes over broad rewrites.
 - Run `npm run build` after TypeScript or behavior changes when feasible.
 - Documentation-only changes do not require a build unless package metadata or generated outputs are touched.
@@ -119,8 +120,7 @@ The intended experience is local-first, keyboard-driven, calm, and focused. User
 - Keep study-mode system prompts in `src/prompts` as TypeScript string exports only. Do not put response schemas, provider calls, or UI logic in prompt files.
 - Keep response schemas outside `src/prompts`; provider options may pass schemas separately when needed.
 - The Codex provider supports `file`, `files`, and `responseSchema` prompt options. File options are appended to the prompt as material references the model reads from disk, and `responseSchema` maps to the AI SDK's structured `output`.
-- Input handlers should ignore terminal mouse reports with `isTerminalMouseReport` before interpreting keys.
-- `src/index.tsx` enables terminal mouse reporting to keep pointer behavior stable in alternate-screen mode and restores it on exit.
+- The OpenTUI renderer owns mouse reporting and keyboard parsing; input handlers receive parsed keys through `useAppKeys`/the shared key adapter in `src/shared/terminal/keymap.ts`.
 - Do not introduce API keys, secrets, or local user config into the repository.
 - Do not change license or contribution policy casually. Ask first if the task touches legal terms.
 

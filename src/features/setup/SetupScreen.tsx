@@ -1,29 +1,40 @@
 import React from 'react';
-import { Box, Text, useInput } from 'ink';
+import { TextAttributes } from '@opentui/core';
 import { ProviderSelector } from './ProviderSelector.js';
 import { ApiKeyInput } from './ApiKeyInput.js';
 import { saveConfig, CONFIG_FILE } from '../../utils/config.js';
 import type { Provider } from '../../domain/provider.js';
 import { PROVIDER_METADATA } from '../../providers/index.js';
+import { useAppKeys } from '../../shared/terminal/keymap.js';
 
 type Step = 'welcome' | 'provider' | 'apikey' | 'saving' | 'done';
 
 // ─── Layout helpers ────────────────────────────────────────────────────────────
 
-const Divider: React.FC = () => <Text dimColor>{'─'.repeat(42)}</Text>;
-
-const Logo: React.FC = () => (
-  <Box flexDirection="column" marginBottom={1}>
-    <Text bold color="cyan">
-      OpenStudy CLI
-    </Text>
-    <Text color="gray">AI-powered study assistant</Text>
-    <Box marginTop={1} flexDirection="column">
-      <Text dimColor>Implemented by Itri Cloud Labs</Text>
-      <Text dimColor>Powered by Itri Cloud</Text>
-    </Box>
-  </Box>
+const Divider = () => (
+  <text fg={THEME_MUTED} attributes={TextAttributes.DIM}>
+    {'─'.repeat(42)}
+  </text>
 );
+
+const SetupLogo = () => (
+  <box style={{ flexDirection: 'column', marginBottom: 1 }}>
+    <text fg="#ffffff" attributes={TextAttributes.BOLD}>
+      OpenStudy CLI
+    </text>
+    <text fg="#808080">AI-powered study assistant</text>
+    <box style={{ marginTop: 1, flexDirection: 'column' }}>
+      <text fg={THEME_MUTED} attributes={TextAttributes.DIM}>
+        Implemented by Itri Cloud Labs
+      </text>
+      <text fg={THEME_MUTED} attributes={TextAttributes.DIM}>
+        Powered by Itri Cloud
+      </text>
+    </box>
+  </box>
+);
+
+const THEME_MUTED = '#808080';
 
 // ─── Welcome step ──────────────────────────────────────────────────────────────
 
@@ -31,19 +42,23 @@ interface WelcomeStepProps {
   onContinue: () => void;
 }
 
-const WelcomeStep: React.FC<WelcomeStepProps> = ({ onContinue }) => {
-  useInput((_ch, key) => {
-    if (key.return || _ch === ' ') onContinue();
+const WelcomeStep = ({ onContinue }: WelcomeStepProps) => {
+  useAppKeys(({ input, key }) => {
+    if (key.return || input === ' ') onContinue();
   });
 
   return (
-    <Box flexDirection="column" gap={1}>
-      <Text bold color="white">
-        Welcome! Let&apos;s set up your environment.
-      </Text>
-      <Text dimColor>This wizard will configure your AI provider and API key.</Text>
-      <Text dimColor>Press enter to begin…</Text>
-    </Box>
+    <box style={{ flexDirection: 'column', marginBottom: 1 }}>
+      <text fg="#ffffff" attributes={TextAttributes.BOLD}>
+        {"Welcome! Let's set up your environment."}
+      </text>
+      <text fg={THEME_MUTED} attributes={TextAttributes.DIM}>
+        This wizard will configure your AI provider and API key.
+      </text>
+      <text fg={THEME_MUTED} attributes={TextAttributes.DIM}>
+        Press enter to begin…
+      </text>
+    </box>
   );
 };
 
@@ -55,14 +70,14 @@ interface SavingStepProps {
   onDone: () => void;
 }
 
-const SavingStep: React.FC<SavingStepProps> = ({ provider, apiKey, onDone }) => {
+const SavingStep = ({ provider, apiKey, onDone }: SavingStepProps) => {
   React.useEffect(() => {
     saveConfig({ provider, apiKey });
     const t = setTimeout(onDone, 600);
     return () => clearTimeout(t);
   }, [apiKey, onDone, provider]);
 
-  return <Text color="yellow">Saving configuration…</Text>;
+  return <text fg="#e5c07b">Saving configuration…</text>;
 };
 
 // ─── Done step ─────────────────────────────────────────────────────────────────
@@ -72,29 +87,34 @@ interface DoneStepProps {
   onExit: () => void;
 }
 
-const DoneStep: React.FC<DoneStepProps> = ({ provider, onExit }) => {
+const DoneStep = ({ provider, onExit }: DoneStepProps) => {
   const label = PROVIDER_METADATA.find(p => p.id === provider)?.label ?? provider;
 
-  useInput((_ch, key) => {
-    if (_ch === 'q' || key.escape || (key.ctrl && _ch === 'c')) {
+  useAppKeys(({ input, key }) => {
+    if (input === 'q' || key.escape || (key.ctrl && input === 'c')) {
       onExit();
     }
   });
 
   return (
-    <Box flexDirection="column" gap={1}>
-      <Text bold color="green">
+    <box style={{ flexDirection: 'column', marginBottom: 1 }}>
+      <text fg="#7fd88f" attributes={TextAttributes.BOLD}>
         ✓ Setup complete!
-      </Text>
-      <Text color="white">
-        Provider: <Text color="cyan">{label}</Text>
-      </Text>
-      <Text dimColor>Config saved to {CONFIG_FILE}</Text>
-      <Box marginTop={1}>
-        <Text color="white">You can now start using OpenStudy CLI.</Text>
-      </Box>
-      <Text dimColor>Press q or esc to exit.</Text>
-    </Box>
+      </text>
+      <text>
+        <span fg="#ffffff">Provider: </span>
+        <span fg="#56b6c2">{label}</span>
+      </text>
+      <text fg={THEME_MUTED} attributes={TextAttributes.DIM}>
+        {`Config saved to ${CONFIG_FILE}`}
+      </text>
+      <box style={{ marginTop: 1 }}>
+        <text fg="#ffffff">You can now start using OpenStudy CLI.</text>
+      </box>
+      <text fg={THEME_MUTED} attributes={TextAttributes.DIM}>
+        Press q or esc to exit.
+      </text>
+    </box>
   );
 };
 
@@ -104,7 +124,7 @@ interface SetupScreenProps {
   onExit: () => void;
 }
 
-export const SetupScreen: React.FC<SetupScreenProps> = ({ onExit }) => {
+export const SetupScreen = ({ onExit }: SetupScreenProps) => {
   const [step, setStep] = React.useState<Step>('welcome');
   const [provider, setProvider] = React.useState<Provider | null>(null);
   const [apiKey, setApiKey] = React.useState('');
@@ -123,8 +143,8 @@ export const SetupScreen: React.FC<SetupScreenProps> = ({ onExit }) => {
   };
 
   return (
-    <Box flexDirection="column" paddingX={2} paddingY={1} gap={1}>
-      <Logo />
+    <box style={{ flexDirection: 'column', paddingLeft: 2, paddingRight: 2, paddingTop: 1, paddingBottom: 1 }}>
+      <SetupLogo />
       <Divider />
 
       {step === 'welcome' && <WelcomeStep onContinue={() => setStep('provider')} />}
@@ -140,6 +160,6 @@ export const SetupScreen: React.FC<SetupScreenProps> = ({ onExit }) => {
       )}
 
       {step === 'done' && provider && <DoneStep provider={provider} onExit={onExit} />}
-    </Box>
+    </box>
   );
 };

@@ -1,4 +1,4 @@
-import { Box, Text } from 'ink';
+import { TextAttributes } from '@opentui/core';
 import { createHandleInput, isCancel, isSubmit } from './input.js';
 import type { ModalContext, ModalRenderProps } from './types.js';
 import { THEME } from '../shared/theme.js';
@@ -26,21 +26,20 @@ export function render({ modal, context }: ModalRenderProps<MessageModalState>) 
 
   return (
     <>
-      <Box justifyContent="space-between" marginBottom={1}>
-        <Text color={THEME.text} bold>
+      <box style={{ justifyContent: 'space-between', marginBottom: 1 }}>
+        <text fg={THEME.text} attributes={TextAttributes.BOLD}>
           {state.title}
-        </Text>
-        <Text color={THEME.textMuted}>esc</Text>
-      </Box>
-      <Box marginBottom={1}>
-        <Text color={THEME.textMuted}>{state.message}</Text>
-      </Box>
-      <Box justifyContent="flex-end">
-        <Text color={THEME.onAccent} backgroundColor={context.selectedSubject?.color ?? '#3b82f6'}>
-          {' '}
-          ok{' '}
-        </Text>
-      </Box>
+        </text>
+        <text fg={THEME.textMuted}>esc</text>
+      </box>
+      <box style={{ marginBottom: 1 }}>
+        <text fg={THEME.textMuted}>{state.message}</text>
+      </box>
+      <box style={{ justifyContent: 'flex-end' }}>
+        <text fg={THEME.onAccent} bg={context.selectedSubject?.color ?? '#3b82f6'}>
+          {' ok '}
+        </text>
+      </box>
     </>
   );
 }

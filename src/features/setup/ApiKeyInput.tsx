@@ -1,19 +1,17 @@
 import React from 'react';
-import { Box, Text, useInput } from 'ink';
-import { isTerminalMouseReport } from '../../utils/input.js';
+import { TextAttributes } from '@opentui/core';
+import { useAppKeys } from '../../shared/terminal/keymap.js';
 
 interface ApiKeyInputProps {
   providerLabel: string;
   onSubmit: (apiKey: string) => void;
 }
 
-export const ApiKeyInput: React.FC<ApiKeyInputProps> = ({ providerLabel, onSubmit }) => {
+export const ApiKeyInput = ({ providerLabel, onSubmit }: ApiKeyInputProps) => {
   const [value, setValue] = React.useState('');
   const [error, setError] = React.useState('');
 
-  useInput((input, key) => {
-    if (isTerminalMouseReport(input)) return;
-
+  useAppKeys(({ input, key }) => {
     if (key.return) {
       if (value.trim().length === 0) {
         setError('API key cannot be empty.');
@@ -39,16 +37,31 @@ export const ApiKeyInput: React.FC<ApiKeyInputProps> = ({ providerLabel, onSubmi
   const masked = '●'.repeat(value.length);
 
   return (
-    <Box flexDirection="column" gap={1}>
-      <Text bold color="white">
-        Enter your {providerLabel} API key:
-      </Text>
+    <box style={{ flexDirection: 'column', marginBottom: 1 }}>
+      <text fg="#ffffff" attributes={TextAttributes.BOLD}>
+        {`Enter your ${providerLabel} API key:`}
+      </text>
 
-      <Box borderStyle="round" borderColor={error ? 'red' : 'gray'} paddingX={1}>
-        <Text color={value.length > 0 ? 'white' : 'gray'}>{value.length > 0 ? masked : 'Type your key…'}</Text>
-      </Box>
+      <box
+        style={{
+          borderStyle: 'rounded',
+          borderColor: error ? '#ef4444' : '#808080',
+          paddingLeft: 1,
+          paddingRight: 1,
+          marginTop: 1,
+          marginBottom: 1,
+        }}
+      >
+        <text fg={value.length > 0 ? '#ffffff' : '#808080'}>{value.length > 0 ? masked : 'Type your key…'}</text>
+      </box>
 
-      {error ? <Text color="red">{error}</Text> : <Text dimColor>Input is hidden enter to confirm</Text>}
-    </Box>
+      {error ? (
+        <text fg="#ef4444">{error}</text>
+      ) : (
+        <text fg="#808080" attributes={TextAttributes.DIM}>
+          Input is hidden enter to confirm
+        </text>
+      )}
+    </box>
   );
 };

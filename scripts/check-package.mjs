@@ -15,13 +15,13 @@ if (packageJson.main !== 'dist/index.js') errors.push('package.json main must ma
 if (!Array.isArray(packageJson.files) || packageJson.files.length !== 1 || packageJson.files[0] !== 'dist') {
   errors.push('package.json files must publish dist only.');
 }
-if (packageJson.engines?.node !== '>=22')
-  errors.push('package.json must declare the Ink-compatible Node.js >=22 runtime.');
+if (packageJson.engines?.bun !== '>=1.3')
+  errors.push('package.json must declare the OpenTUI-compatible Bun >=1.3 runtime.');
 
 const entryPoint = path.join(outputRoot, 'index.js');
 if (!fs.existsSync(entryPoint)) {
   errors.push('dist/index.js is missing; run npm run build first.');
-} else if (!fs.readFileSync(entryPoint, 'utf8').startsWith('#!/usr/bin/env node\n')) {
+} else if (!fs.readFileSync(entryPoint, 'utf8').startsWith('#!/usr/bin/env bun\n')) {
   errors.push('dist/index.js must preserve the CLI shebang.');
 }
 

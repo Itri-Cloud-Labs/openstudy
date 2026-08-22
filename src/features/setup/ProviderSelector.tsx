@@ -1,16 +1,17 @@
 import React from 'react';
-import { Box, Text, useInput } from 'ink';
+import { TextAttributes } from '@opentui/core';
 import type { Provider } from '../../domain/provider.js';
 import { PROVIDER_METADATA } from '../../providers/index.js';
+import { useAppKeys } from '../../shared/terminal/keymap.js';
 
 interface ProviderSelectorProps {
   onSelect: (provider: Provider) => void;
 }
 
-export const ProviderSelector: React.FC<ProviderSelectorProps> = ({ onSelect }) => {
+export const ProviderSelector = ({ onSelect }: ProviderSelectorProps) => {
   const [cursor, setCursor] = React.useState(0);
 
-  useInput((_, key) => {
+  useAppKeys(({ key }) => {
     if (key.upArrow) {
       setCursor(prev => (prev - 1 + PROVIDER_METADATA.length) % PROVIDER_METADATA.length);
     } else if (key.downArrow) {
@@ -22,24 +23,26 @@ export const ProviderSelector: React.FC<ProviderSelectorProps> = ({ onSelect }) 
   });
 
   return (
-    <Box flexDirection="column" gap={1}>
-      <Text bold color="white">
+    <box style={{ flexDirection: 'column', marginBottom: 1 }}>
+      <text fg="#ffffff" attributes={TextAttributes.BOLD}>
         Select an AI provider:
-      </Text>
-      <Box flexDirection="column">
+      </text>
+      <box style={{ flexDirection: 'column' }}>
         {PROVIDER_METADATA.map((provider, index) => {
           const isActive = index === cursor;
           return (
-            <Box key={provider.id} paddingLeft={1}>
-              <Text color={isActive ? 'cyan' : 'gray'}>
+            <box key={provider.id} style={{ paddingLeft: 1 }}>
+              <text fg={isActive ? '#56b6c2' : '#808080'}>
                 {isActive ? '❯ ' : '  '}
                 {provider.label}
-              </Text>
-            </Box>
+              </text>
+            </box>
           );
         })}
-      </Box>
-      <Text dimColor>↑ ↓ navigate enter select</Text>
-    </Box>
+      </box>
+      <text fg="#808080" attributes={TextAttributes.DIM}>
+        ↑ ↓ navigate enter select
+      </text>
+    </box>
   );
 };

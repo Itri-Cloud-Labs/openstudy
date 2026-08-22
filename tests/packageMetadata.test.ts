@@ -11,7 +11,7 @@ test('package metadata targets the supported CLI runtime', () => {
   assert.deepEqual(packageJson.bin, { openstudy: 'dist/index.js' });
   assert.equal(packageJson.main, 'dist/index.js');
   assert.deepEqual(packageJson.files, ['dist']);
-  assert.deepEqual(packageJson.engines, { node: '>=22', npm: '>=10' });
+  assert.deepEqual(packageJson.engines, { bun: '>=1.3', npm: '>=10' });
 });
 
 test('package scripts enforce clean, validated releases', () => {

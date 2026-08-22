@@ -1,4 +1,4 @@
-import { Box, Text } from 'ink';
+import { TextAttributes } from '@opentui/core';
 import { THEME } from '../../shared/theme.js';
 import { focusTextColor } from '../../utils/colors.js';
 import type { ModalRenderProps } from '../types.js';
@@ -16,16 +16,16 @@ export function ModelsLayer({ modal, context }: ModalRenderProps<ModelsListState
 
   return (
     <>
-      <Box justifyContent="space-between" marginBottom={1}>
-        <Text color={THEME.text} bold>
+      <box style={{ justifyContent: 'space-between', marginBottom: 1 }}>
+        <text fg={THEME.text} attributes={TextAttributes.BOLD}>
           {getProviderLabel(modal.provider)}
-        </Text>
-        <Text color={THEME.textMuted}>esc</Text>
-      </Box>
-      <Box marginBottom={1}>
-        <Text color={THEME.textMuted}>Select a model.</Text>
-      </Box>
-      <Box flexDirection="column" marginBottom={1}>
+        </text>
+        <text fg={THEME.textMuted}>esc</text>
+      </box>
+      <box style={{ marginBottom: 1 }}>
+        <text fg={THEME.textMuted}>Select a model.</text>
+      </box>
+      <box style={{ flexDirection: 'column', marginBottom: 1 }}>
         {visibleModels.map((modelOption, index) => {
           const modelIndex = modelWindowStart + index;
           const isSelected = modal.selected === modelIndex;
@@ -33,26 +33,32 @@ export function ModelsLayer({ modal, context }: ModalRenderProps<ModelsListState
             context.selectedModel?.provider === modal.provider && context.selectedModel.name === modelOption.model;
 
           return (
-            <Box
+            <box
               key={modelOption.id}
-              backgroundColor={isSelected ? subjectColor : undefined}
-              justifyContent="space-between"
+              style={{
+                backgroundColor: isSelected ? subjectColor : undefined,
+                justifyContent: 'space-between',
+              }}
             >
-              <Text color={isSelected ? THEME.onAccent : THEME.text} bold={isSelected}>
+              <text
+                fg={isSelected ? THEME.onAccent : THEME.text}
+                attributes={isSelected ? TextAttributes.BOLD : TextAttributes.NONE}
+              >
                 {modelOption.label}
-              </Text>
-              {isCurrent && <Text color={focusTextColor(THEME.success, subjectColor, isSelected)}>current</Text>}
-            </Box>
+              </text>
+              {isCurrent && <text fg={focusTextColor(THEME.success, subjectColor, isSelected)}>current</text>}
+            </box>
           );
         })}
-      </Box>
-      <Box justifyContent="space-between">
-        <Text color={THEME.textMuted}>
-          {modal.subProvider ? '← back' : '← providers'} {modelWindowStart + 1}-
-          {modelWindowStart + visibleModels.length}/{modelOptions.length}
-        </Text>
-        <Text color={THEME.textMuted}>enter select</Text>
-      </Box>
+      </box>
+      <box style={{ justifyContent: 'space-between' }}>
+        <text fg={THEME.textMuted}>
+          {modal.subProvider
+            ? `← back ${modelWindowStart + 1}-${modelWindowStart + visibleModels.length}/${modelOptions.length}`
+            : `← providers ${modelWindowStart + 1}-${modelWindowStart + visibleModels.length}/${modelOptions.length}`}
+        </text>
+        <text fg={THEME.textMuted}>enter select</text>
+      </box>
     </>
   );
 }
