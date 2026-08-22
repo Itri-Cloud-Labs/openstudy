@@ -44,4 +44,4 @@ jobs:
           npm run package:check
 
       - name: Audit production dependencies
-        run: npm audit --omit=dev --audit-level=high
+        run: bun audit --audit-level high

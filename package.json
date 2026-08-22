@@ -33,7 +33,7 @@
     "format": "biome format --write .",
     "format:check": "biome format .",
     "test": "bun test tests/",
-    "audit": "npm audit --omit=dev --audit-level=high",
+    "audit": "bun audit --audit-level high",
     "package:check": "node scripts/check-package.mjs",
     "check": "npm run format:check && npm run lint && npm run typecheck && npm run test && npm run build && npm run package:check",
     "prepack": "npm run check"
