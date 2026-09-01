@@ -23,7 +23,7 @@ export const ProviderSelector = ({ onSelect }: ProviderSelectorProps) => {
   });
 
   return (
-    <box style={{ flexDirection: 'column', marginBottom: 1 }}>
+    <box style={{ flexDirection: 'column', gap: 1 }}>
       <text fg="#ffffff" attributes={TextAttributes.BOLD}>
         Select an AI provider:
       </text>

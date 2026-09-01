@@ -48,7 +48,7 @@ const WelcomeStep = ({ onContinue }: WelcomeStepProps) => {
   });
 
   return (
-    <box style={{ flexDirection: 'column', marginBottom: 1 }}>
+    <box style={{ flexDirection: 'column', gap: 1 }}>
       <text fg="#ffffff" attributes={TextAttributes.BOLD}>
         {"Welcome! Let's set up your environment."}
       </text>
@@ -97,7 +97,7 @@ const DoneStep = ({ provider, onExit }: DoneStepProps) => {
   });
 
   return (
-    <box style={{ flexDirection: 'column', marginBottom: 1 }}>
+    <box style={{ flexDirection: 'column', gap: 1 }}>
       <text fg="#7fd88f" attributes={TextAttributes.BOLD}>
         ✓ Setup complete!
       </text>
@@ -143,7 +143,7 @@ export const SetupScreen = ({ onExit }: SetupScreenProps) => {
   };
 
   return (
-    <box style={{ flexDirection: 'column', paddingLeft: 2, paddingRight: 2, paddingTop: 1, paddingBottom: 1 }}>
+    <box style={{ flexDirection: 'column', gap: 1, paddingLeft: 2, paddingRight: 2, paddingTop: 1, paddingBottom: 1 }}>
       <SetupLogo />
       <Divider />
 

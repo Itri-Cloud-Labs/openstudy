@@ -42,7 +42,7 @@ export const ApiKeyInput = ({ providerLabel, onSubmit }: ApiKeyInputProps) => {
   const masked = '●'.repeat(value.length);
 
   return (
-    <box style={{ flexDirection: 'column', marginBottom: 1 }}>
+    <box style={{ flexDirection: 'column', gap: 1 }}>
       <text fg="#ffffff" attributes={TextAttributes.BOLD}>
         {`Enter your ${providerLabel} API key:`}
       </text>
@@ -53,8 +53,6 @@ export const ApiKeyInput = ({ providerLabel, onSubmit }: ApiKeyInputProps) => {
           borderColor: error ? '#ef4444' : '#808080',
           paddingLeft: 1,
           paddingRight: 1,
-          marginTop: 1,
-          marginBottom: 1,
         }}
       >
         <text fg={value.length > 0 ? '#ffffff' : '#808080'}>{value.length > 0 ? masked : 'Type your key…'}</text>

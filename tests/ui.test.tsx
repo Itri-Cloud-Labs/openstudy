@@ -3,6 +3,7 @@ import { describe, it } from 'node:test';
 import { testRender } from '@opentui/react/test-utils';
 
 import { HomeScreen } from '../src/features/home/HomeScreen.tsx';
+import { SetupScreen } from '../src/features/setup/SetupScreen.tsx';
 import { render as renderMessage } from '../src/modals/message.tsx';
 import type { ModalRenderContext } from '../src/modals/types.ts';
 import { Logo } from '../src/shared/ui/Logo.tsx';
@@ -108,6 +109,22 @@ describe('OpenTUI rendering', () => {
       await new Promise(resolve => setTimeout(resolve, 10));
       await setup.renderOnce();
       assert.match(setup.captureCharFrame(), /PASTED TEXT/);
+    } finally {
+      setup.renderer.destroy();
+    }
+  });
+
+  it('preserves the setup wizard spacing', async () => {
+    const setup = await testRender(<SetupScreen onExit={() => {}} />, { width: 73, height: 23 });
+
+    try {
+      await setup.renderOnce();
+      const lines = setup.captureCharFrame().split('\n');
+      const divider = lines.findIndex(line => line.includes('────'));
+      const welcome = lines.findIndex(line => line.includes("Welcome! Let's set up"));
+      const description = lines.findIndex(line => line.includes('This wizard will configure'));
+      assert.equal(welcome - divider, 2);
+      assert.equal(description - welcome, 2);
     } finally {
       setup.renderer.destroy();
     }
