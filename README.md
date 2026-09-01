@@ -13,7 +13,7 @@ It is a young project. Summary and Quiz modes work. FlashCards, Exercises, AI Te
 - Model and reasoning options discovered from the selected provider
 - Local files and HTTP or HTTPS documents as study material
 - AI-generated summaries with structured sections
-- Five-question quizzes with immediate feedback and saved question sets
+- Material-sized quizzes with immediate feedback and saved question sets
 - Saved preferences and study sessions under `~/.openstudy`
 - A setup wizard and slash commands for setup, sessions, and exit
 

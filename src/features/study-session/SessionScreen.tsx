@@ -61,7 +61,7 @@ export const SessionScreen = ({
     materialPath: presentation.materialPath,
     studyLanguage: presentation.studyLanguage,
   });
-  const quizState = useQuiz({
+  const { quizState, generateNewQuiz } = useQuiz({
     enabled: activeModeIndex === 1,
     sessionId,
     modelProvider: presentation.modelProvider,
@@ -106,6 +106,7 @@ export const SessionScreen = ({
               contentWidth={contentWidth}
               contentHeight={contentHeight}
               quizState={quizState}
+              onNewRound={generateNewQuiz}
               inputActive={inputActive}
               commandMenuActive={commandMenuActive}
             />

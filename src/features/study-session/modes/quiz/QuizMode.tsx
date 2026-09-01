@@ -8,27 +8,50 @@ import type { QuizState } from './useQuiz.js';
 
 export interface QuizModeProps extends ModeProps {
   quizState: QuizState;
+  onNewRound: () => void;
 }
 
-export function QuizMode({ contentWidth, contentHeight, inputActive, commandMenuActive, quizState }: QuizModeProps) {
+export function QuizMode({
+  contentWidth,
+  contentHeight,
+  inputActive,
+  commandMenuActive,
+  quizState,
+  onNewRound,
+}: QuizModeProps) {
   const [questionIndex, setQuestionIndex] = React.useState(0);
   const [selectedIndex, setSelectedIndex] = React.useState(0);
   const [revealed, setRevealed] = React.useState(false);
   const [score, setScore] = React.useState(0);
   const [complete, setComplete] = React.useState(false);
+  const [answers, setAnswers] = React.useState<number[]>([]);
   const question = quizState.status === 'ready' ? quizState.quiz.questions[questionIndex] : null;
+
+  const restart = React.useCallback(() => {
+    setQuestionIndex(0);
+    setSelectedIndex(0);
+    setRevealed(false);
+    setScore(0);
+    setComplete(false);
+    setAnswers([]);
+  }, []);
+
+  const startNewRound = React.useCallback(() => {
+    restart();
+    onNewRound();
+  }, [onNewRound, restart]);
 
   useAppKeys(
     ({ input, key }) => {
       if (quizState.status !== 'ready') return;
 
       if (complete) {
+        if (input.toLowerCase() === 'n') {
+          startNewRound();
+          return;
+        }
         if (key.return || input.toLowerCase() === 'r') {
-          setQuestionIndex(0);
-          setSelectedIndex(0);
-          setRevealed(false);
-          setScore(0);
-          setComplete(false);
+          restart();
         }
         return;
       }
@@ -53,6 +76,7 @@ export function QuizMode({ contentWidth, contentHeight, inputActive, commandMenu
 
       if (!revealed) {
         if (selectedIndex === activeQuestion.correctIndex) setScore(current => current + 1);
+        setAnswers(current => [...current, selectedIndex]);
         setRevealed(true);
         return;
       }
@@ -70,7 +94,7 @@ export function QuizMode({ contentWidth, contentHeight, inputActive, commandMenu
   );
 
   if (quizState.status === 'loading') {
-    return <QuizMessage status="generating" message="Generating five questions from your study material..." />;
+    return <QuizMessage status="generating" message="Building a quiz sized to your study material..." />;
   }
 
   if (quizState.status === 'error') {
@@ -79,16 +103,35 @@ export function QuizMode({ contentWidth, contentHeight, inputActive, commandMenu
 
   if (complete) {
     const total = quizState.quiz.questions.length;
+    const accuracy = Math.round((score / total) * 100);
+    const reviewRows = Math.max(1, contentHeight - 9);
+    const review = quizState.quiz.questions.slice(0, reviewRows);
     return (
       <box style={{ flexDirection: 'column' }}>
         <QuizHeader status="complete" />
-        <box style={{ height: Math.max(1, contentHeight - 3), flexDirection: 'column', justifyContent: 'center' }}>
+        <box style={{ height: Math.max(1, contentHeight - 3), flexDirection: 'column', overflow: 'hidden' }}>
           <text fg={THEME.primary} attributes={TextAttributes.BOLD}>
-            {`${score} / ${total}`}
+            {`${score} / ${total} correct  ·  ${accuracy}%`}
           </text>
           <text fg={THEME.text}>{scoreLabel(score, total)}</text>
+
+          <box style={{ flexDirection: 'column', marginTop: 1 }}>
+            <text fg={THEME.textMuted} attributes={TextAttributes.BOLD}>
+              Answer review
+            </text>
+            {review.map((item, index) => {
+              const correct = answers[index] === item.correctIndex;
+              return (
+                <text key={item.question} fg={correct ? THEME.success : THEME.danger}>
+                  {`${correct ? '✓' : 'x'} ${truncate(item.topic, Math.max(1, contentWidth - 16))}  ${item.difficulty}`}
+                </text>
+              );
+            })}
+            {review.length < total && <text fg={THEME.textMuted}>{`+ ${total - review.length} more`}</text>}
+          </box>
+
           <box style={{ marginTop: 1 }}>
-            <text fg={THEME.textMuted}>enter or r restart</text>
+            <text fg={THEME.textMuted}>r or enter restart this quiz · n generate new questions</text>
           </box>
         </box>
       </box>
@@ -99,11 +142,15 @@ export function QuizMode({ contentWidth, contentHeight, inputActive, commandMenu
 
   const choiceWidth = Math.max(1, contentWidth - 7);
   const answerIsCorrect = selectedIndex === question.correctIndex;
+  const total = quizState.quiz.questions.length;
+  const progressWidth = Math.max(4, Math.min(28, contentWidth - 34));
+  const completedWidth = Math.round((answers.length / total) * progressWidth);
 
   return (
     <box style={{ flexDirection: 'column' }}>
-      <QuizHeader status={`${questionIndex + 1}/${quizState.quiz.questions.length}  score ${score}`} />
+      <QuizHeader status={`${questionIndex + 1}/${total}  score ${score}`} />
       <box style={{ height: Math.max(1, contentHeight - 3), flexDirection: 'column', overflow: 'hidden' }}>
+        <text fg={THEME.primary}>{`${question.topic}  ·  ${question.difficulty}`}</text>
         <text fg={THEME.text} attributes={TextAttributes.BOLD}>
           {question.question}
         </text>
@@ -131,6 +178,20 @@ export function QuizMode({ contentWidth, contentHeight, inputActive, commandMenu
             </text>
             <text fg={THEME.textMuted}>{question.explanation}</text>
             <text fg={THEME.textMuted}>enter next</text>
+          </box>
+        )}
+
+        {!revealed && (
+          <box style={{ marginTop: 1 }}>
+            <text fg={THEME.textMuted}>1-4 or up/down choose · enter check</text>
+          </box>
+        )}
+
+        {!revealed && (
+          <box style={{ marginTop: 1 }}>
+            <text fg={THEME.textMuted}>
+              {`${'━'.repeat(completedWidth)}${'─'.repeat(progressWidth - completedWidth)}  ${answers.length} answered  ·  ${total - answers.length} remaining`}
+            </text>
           </box>
         )}
       </box>

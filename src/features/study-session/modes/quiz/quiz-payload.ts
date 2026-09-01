@@ -1,4 +1,6 @@
 export interface QuizQuestion {
+  topic: string;
+  difficulty: string;
   question: string;
   choices: string[];
   correctIndex: number;
@@ -53,6 +55,12 @@ function normalizeQuestion(value: unknown): QuizQuestion | null {
   }
 
   return {
+    topic:
+      'topic' in value && typeof value.topic === 'string' && value.topic.trim() ? value.topic.trim() : 'Core concept',
+    difficulty:
+      'difficulty' in value && typeof value.difficulty === 'string' && value.difficulty.trim()
+        ? value.difficulty.trim()
+        : 'Mixed',
     question: value.question.trim(),
     choices: choices.map(choice => choice.trim()),
     correctIndex,

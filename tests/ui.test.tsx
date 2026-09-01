@@ -187,17 +187,21 @@ describe('OpenTUI rendering', () => {
   });
 
   it('runs a quiz question through answer feedback and completion', async () => {
+    let newRounds = 0;
     const setup = await testRender(
       <QuizMode
         contentWidth={60}
         contentHeight={14}
         inputActive
         commandMenuActive={false}
+        onNewRound={() => (newRounds += 1)}
         quizState={{
           status: 'ready',
           quiz: {
             questions: [
               {
+                topic: 'Genetics',
+                difficulty: 'Introductory',
                 question: 'Which structure stores genetic information?',
                 choices: ['Cell wall', 'DNA', 'Water', 'Glucose'],
                 correctIndex: 1,
@@ -224,7 +228,6 @@ describe('OpenTUI rendering', () => {
       await new Promise(resolve => setTimeout(resolve, 20));
       await setup.renderOnce();
       const feedbackFrame = setup.captureCharFrame();
-      assert.match(feedbackFrame, /Correct\./);
       assert.match(feedbackFrame, /DNA stores hereditary information/);
 
       await setup.mockInput.pressKeys(['RETURN']);
@@ -233,6 +236,11 @@ describe('OpenTUI rendering', () => {
       const completeFrame = setup.captureCharFrame();
       assert.match(completeFrame, /1 \/ 1/);
       assert.match(completeFrame, /Perfect score\./);
+      assert.match(completeFrame, /Answer review/);
+
+      await setup.mockInput.typeText('n');
+      await new Promise(resolve => setTimeout(resolve, 20));
+      assert.equal(newRounds, 1);
     } finally {
       setup.renderer.destroy();
     }

@@ -21,9 +21,25 @@ export interface UseQuizOptions {
   studyLanguage: string;
 }
 
-export function useQuiz(options: UseQuizOptions): QuizState {
+export interface UseQuizResult {
+  quizState: QuizState;
+  generateNewQuiz: () => void;
+}
+
+export function useQuiz(options: UseQuizOptions): UseQuizResult {
   const { enabled, sessionId, modelProvider, model, materialPath, studyLanguage, reasoningEffort } = options;
   const [state, setState] = React.useState<QuizState>(() => initialState(sessionId));
+  const [generationRequest, setGenerationRequest] = React.useState(0);
+  const handledGeneration = React.useRef(0);
+  const previousQuestions = React.useRef<string[]>([]);
+
+  const generateNewQuiz = React.useCallback(() => {
+    if (state.status === 'ready') {
+      previousQuestions.current = state.quiz.questions.map(question => question.question);
+    }
+    setState({ status: 'loading' });
+    setGenerationRequest(current => current + 1);
+  }, [state]);
 
   React.useEffect(() => {
     if (!enabled) return;
@@ -34,7 +50,8 @@ export function useQuiz(options: UseQuizOptions): QuizState {
     }
 
     const storedQuiz = normalizeQuizPayload(getSessionById(sessionId)?.modeResults.quiz);
-    if (storedQuiz) {
+    const freshRoundRequested = generationRequest > handledGeneration.current;
+    if (storedQuiz && !freshRoundRequested) {
       setState({ status: 'ready', quiz: storedQuiz });
       return;
     }
@@ -62,6 +79,7 @@ export function useQuiz(options: UseQuizOptions): QuizState {
     }
 
     const controller = new AbortController();
+    handledGeneration.current = generationRequest;
     setState({ status: 'loading' });
 
     void generateQuiz({
@@ -70,6 +88,7 @@ export function useQuiz(options: UseQuizOptions): QuizState {
       reasoningEffort,
       material,
       studyLanguage,
+      previousQuestions: previousQuestions.current,
       signal: controller.signal,
     })
       .then(quiz => {
@@ -83,9 +102,9 @@ export function useQuiz(options: UseQuizOptions): QuizState {
       });
 
     return () => controller.abort();
-  }, [enabled, materialPath, model, modelProvider, reasoningEffort, sessionId, studyLanguage]);
+  }, [enabled, generationRequest, materialPath, model, modelProvider, reasoningEffort, sessionId, studyLanguage]);
 
-  return state;
+  return { quizState: state, generateNewQuiz };
 }
 
 function initialState(sessionId: string | null): QuizState {
