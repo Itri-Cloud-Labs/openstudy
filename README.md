@@ -139,7 +139,7 @@ Important files:
 - `npm run format`: format supported project files.
 - `npm test`: run the test suite once.
 - `npm run test:watch`: re-run tests as files change.
-- `npm run audit`: check production dependencies for high-severity advisories.
+- `npm run audit`: check dependencies for high-severity advisories.
 - `npm run build`: clean and compile TypeScript into `dist`.
 - `npm run check`: run the complete local and CI quality gate.
 - `npm start`: run `dist/index.js`.

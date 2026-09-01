@@ -8,12 +8,10 @@ OpenStudy is a local-first terminal study assistant built with OpenTUI, React, a
 - npm 10 or newer.
 - A terminal at least `73x23` for interactive testing.
 
-
-
 Install exactly what is recorded in the lockfile:
 
 ```bash
-npm ci
+bun install --frozen-lockfile
 ```
 
 ## Daily workflow
@@ -34,7 +32,7 @@ npm run check
 | `npm run dev` | Run the TypeScript entry point directly with Bun. |
 | `npm run test` | Run the test suite once with Bun's test runner. |
 | `npm run test:watch` | Re-run tests while files change (`bun test --watch`). |
-| `npm run audit` | Fail on high-severity production dependency advisories. |
+| `npm run audit` | Fail on high-severity dependency advisories. |
 | `npm run typecheck` | Type-check both `src` and `tests` without emitting files. |
 | `npm run lint` | Run Biome's correctness checks. |
 | `npm run format` | Format supported project files in place. |

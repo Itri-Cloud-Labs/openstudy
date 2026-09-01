@@ -21,5 +21,6 @@ test('package scripts enforce clean, validated releases', () => {
   assert.match(scripts.check, /npm run typecheck/);
   assert.match(scripts.check, /npm run build/);
   assert.match(scripts.check, /npm run package:check/);
+  assert.equal(scripts['test:watch'], 'bun test --watch tests/');
   assert.equal(scripts.prepack, 'npm run check');
 });

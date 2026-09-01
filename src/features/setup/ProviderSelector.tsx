@@ -3,6 +3,7 @@ import { TextAttributes } from '@opentui/core';
 import type { Provider } from '../../domain/provider.js';
 import { PROVIDER_METADATA } from '../../providers/index.js';
 import { useAppKeys } from '../../shared/terminal/keymap.js';
+import { SETUP_THEME } from './theme.js';
 
 interface ProviderSelectorProps {
   onSelect: (provider: Provider) => void;
@@ -24,7 +25,7 @@ export const ProviderSelector = ({ onSelect }: ProviderSelectorProps) => {
 
   return (
     <box style={{ flexDirection: 'column', gap: 1 }}>
-      <text fg="#ffffff" attributes={TextAttributes.BOLD}>
+      <text fg={SETUP_THEME.text} attributes={TextAttributes.BOLD}>
         Select an AI provider:
       </text>
       <box style={{ flexDirection: 'column' }}>
@@ -32,7 +33,7 @@ export const ProviderSelector = ({ onSelect }: ProviderSelectorProps) => {
           const isActive = index === cursor;
           return (
             <box key={provider.id} style={{ paddingLeft: 1 }}>
-              <text fg={isActive ? '#56b6c2' : '#808080'}>
+              <text fg={isActive ? SETUP_THEME.primary : SETUP_THEME.muted}>
                 {isActive ? '❯ ' : '  '}
                 {provider.label}
               </text>
@@ -40,7 +41,7 @@ export const ProviderSelector = ({ onSelect }: ProviderSelectorProps) => {
           );
         })}
       </box>
-      <text fg="#808080" attributes={TextAttributes.DIM}>
+      <text fg={SETUP_THEME.muted} attributes={TextAttributes.DIM}>
         ↑ ↓ navigate enter select
       </text>
     </box>

@@ -11,27 +11,30 @@ const firstLaunch = isFirstLaunch();
 let shuttingDown = false;
 let renderer: Awaited<ReturnType<typeof createCliRenderer>> | undefined;
 
-function shutdownApp(code?: number): never {
+async function shutdownApp(code = 0, error?: unknown): Promise<never> {
   if (shuttingDown) process.exit(code ?? 0);
   shuttingDown = true;
 
-  void closeProviders();
   renderer?.destroy();
-  process.exit(code ?? 0);
+  try {
+    await closeProviders();
+  } catch (cleanupError) {
+    error ??= cleanupError;
+  }
+  if (error) console.error(error);
+  process.exit(code);
 }
 
 function registerProcessHandlers(): void {
   for (const signal of ['SIGINT', 'SIGTERM', 'SIGHUP'] as const) {
-    process.once(signal, () => shutdownApp(0));
+    process.once(signal, () => void shutdownApp(0));
   }
 
   process.once('uncaughtException', error => {
-    shutdownApp(1);
-    throw error;
+    void shutdownApp(1, error);
   });
   process.once('unhandledRejection', error => {
-    shutdownApp(1);
-    throw error;
+    void shutdownApp(1, error);
   });
 }
 
@@ -47,4 +50,4 @@ renderer = await createCliRenderer({
   exitOnCtrlC: false,
 });
 
-createRoot(renderer).render(<App firstLaunch={firstLaunch} onExit={() => shutdownApp(0)} />);
+createRoot(renderer).render(<App firstLaunch={firstLaunch} onExit={() => void shutdownApp(0)} />);

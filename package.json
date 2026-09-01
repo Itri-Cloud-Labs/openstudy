@@ -33,6 +33,7 @@
     "format": "biome format --write .",
     "format:check": "biome format .",
     "test": "bun test tests/",
+    "test:watch": "bun test --watch tests/",
     "audit": "bun audit --audit-level high",
     "package:check": "node scripts/check-package.mjs",
     "check": "npm run format:check && npm run lint && npm run typecheck && npm run test && npm run build && npm run package:check",
@@ -46,7 +47,7 @@
     "cli",
     "terminal",
     "opencode",
-    "ink"
+    "opentui"
   ],
   "license": "SEE LICENSE IN LICENSE",
   "type": "module",

@@ -1,6 +1,7 @@
 import React from 'react';
 import { TextAttributes } from '@opentui/core';
 import { useAppKeys, useAppPaste } from '../../shared/terminal/keymap.js';
+import { SETUP_THEME } from './theme.js';
 
 interface ApiKeyInputProps {
   providerLabel: string;
@@ -43,25 +44,27 @@ export const ApiKeyInput = ({ providerLabel, onSubmit }: ApiKeyInputProps) => {
 
   return (
     <box style={{ flexDirection: 'column', gap: 1 }}>
-      <text fg="#ffffff" attributes={TextAttributes.BOLD}>
+      <text fg={SETUP_THEME.text} attributes={TextAttributes.BOLD}>
         {`Enter your ${providerLabel} API key:`}
       </text>
 
       <box
         style={{
           borderStyle: 'rounded',
-          borderColor: error ? '#ef4444' : '#808080',
+          borderColor: error ? SETUP_THEME.danger : SETUP_THEME.muted,
           paddingLeft: 1,
           paddingRight: 1,
         }}
       >
-        <text fg={value.length > 0 ? '#ffffff' : '#808080'}>{value.length > 0 ? masked : 'Type your key…'}</text>
+        <text fg={value.length > 0 ? SETUP_THEME.text : SETUP_THEME.muted}>
+          {value.length > 0 ? masked : 'Type your key…'}
+        </text>
       </box>
 
       {error ? (
-        <text fg="#ef4444">{error}</text>
+        <text fg={SETUP_THEME.danger}>{error}</text>
       ) : (
-        <text fg="#808080" attributes={TextAttributes.DIM}>
+        <text fg={SETUP_THEME.muted} attributes={TextAttributes.DIM}>
           Input is hidden enter to confirm
         </text>
       )}

@@ -130,6 +130,20 @@ describe('OpenTUI rendering', () => {
     }
   });
 
+  it('exits setup with ctrl+c', async () => {
+    let exited = false;
+    const setup = await testRender(<SetupScreen onExit={() => (exited = true)} />, { width: 73, height: 23 });
+
+    try {
+      await setup.renderOnce();
+      setup.mockInput.pressCtrlC();
+      await new Promise(resolve => setTimeout(resolve, 10));
+      assert.equal(exited, true);
+    } finally {
+      setup.renderer.destroy();
+    }
+  });
+
   it('positions slash command suggestions above the prompt', async () => {
     const noop = () => {};
     const commands = [

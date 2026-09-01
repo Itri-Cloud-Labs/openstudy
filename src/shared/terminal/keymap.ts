@@ -98,7 +98,7 @@ export function toAppKeyEvent(event: KeyEvent): AppKeyEvent {
   // character through `input` even under ctrl/meta so handlers can match
   // combinations like `key.ctrl && input === 'r'`.
   let input = '';
-  if (name.length === 1) input = event.shift ? name.toUpperCase() : name;
+  if (Array.from(name).length === 1) input = event.shift ? name.toUpperCase() : name;
   else if (name === 'space') input = ' ';
 
   return { input, key };

@@ -173,7 +173,10 @@ function StudyWorkspace({ route, commands, inputDisabled, onExit, onRouteChange 
   });
 
   useAppKeys(({ input, key }) => {
-    if (inputDisabled) return;
+    if (inputDisabled) {
+      if (key.ctrl && input === 'c') onExit();
+      return;
+    }
 
     if (modalManager.modal) {
       const handled =

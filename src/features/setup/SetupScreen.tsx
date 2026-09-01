@@ -6,35 +6,34 @@ import { saveConfig, CONFIG_FILE } from '../../utils/config.js';
 import type { Provider } from '../../domain/provider.js';
 import { PROVIDER_METADATA } from '../../providers/index.js';
 import { useAppKeys } from '../../shared/terminal/keymap.js';
+import { SETUP_THEME } from './theme.js';
 
 type Step = 'welcome' | 'provider' | 'apikey' | 'saving' | 'done';
 
 // ─── Layout helpers ────────────────────────────────────────────────────────────
 
 const Divider = () => (
-  <text fg={THEME_MUTED} attributes={TextAttributes.DIM}>
+  <text fg={SETUP_THEME.muted} attributes={TextAttributes.DIM}>
     {'─'.repeat(42)}
   </text>
 );
 
 const SetupLogo = () => (
   <box style={{ flexDirection: 'column', marginBottom: 1 }}>
-    <text fg="#ffffff" attributes={TextAttributes.BOLD}>
+    <text fg={SETUP_THEME.primary} attributes={TextAttributes.BOLD}>
       OpenStudy CLI
     </text>
-    <text fg="#808080">AI-powered study assistant</text>
+    <text fg={SETUP_THEME.muted}>AI-powered study assistant</text>
     <box style={{ marginTop: 1, flexDirection: 'column' }}>
-      <text fg={THEME_MUTED} attributes={TextAttributes.DIM}>
+      <text fg={SETUP_THEME.muted} attributes={TextAttributes.DIM}>
         Implemented by Itri Cloud Labs
       </text>
-      <text fg={THEME_MUTED} attributes={TextAttributes.DIM}>
+      <text fg={SETUP_THEME.muted} attributes={TextAttributes.DIM}>
         Powered by Itri Cloud
       </text>
     </box>
   </box>
 );
-
-const THEME_MUTED = '#808080';
 
 // ─── Welcome step ──────────────────────────────────────────────────────────────
 
@@ -49,13 +48,13 @@ const WelcomeStep = ({ onContinue }: WelcomeStepProps) => {
 
   return (
     <box style={{ flexDirection: 'column', gap: 1 }}>
-      <text fg="#ffffff" attributes={TextAttributes.BOLD}>
+      <text fg={SETUP_THEME.text} attributes={TextAttributes.BOLD}>
         {"Welcome! Let's set up your environment."}
       </text>
-      <text fg={THEME_MUTED} attributes={TextAttributes.DIM}>
+      <text fg={SETUP_THEME.muted} attributes={TextAttributes.DIM}>
         This wizard will configure your AI provider and API key.
       </text>
-      <text fg={THEME_MUTED} attributes={TextAttributes.DIM}>
+      <text fg={SETUP_THEME.muted} attributes={TextAttributes.DIM}>
         Press enter to begin…
       </text>
     </box>
@@ -77,7 +76,7 @@ const SavingStep = ({ provider, apiKey, onDone }: SavingStepProps) => {
     return () => clearTimeout(t);
   }, [apiKey, onDone, provider]);
 
-  return <text fg="#e5c07b">Saving configuration…</text>;
+  return <text fg={SETUP_THEME.warning}>Saving configuration…</text>;
 };
 
 // ─── Done step ─────────────────────────────────────────────────────────────────
@@ -91,27 +90,27 @@ const DoneStep = ({ provider, onExit }: DoneStepProps) => {
   const label = PROVIDER_METADATA.find(p => p.id === provider)?.label ?? provider;
 
   useAppKeys(({ input, key }) => {
-    if (input === 'q' || key.escape || (key.ctrl && input === 'c')) {
+    if (input === 'q' || key.escape) {
       onExit();
     }
   });
 
   return (
     <box style={{ flexDirection: 'column', gap: 1 }}>
-      <text fg="#7fd88f" attributes={TextAttributes.BOLD}>
+      <text fg={SETUP_THEME.success} attributes={TextAttributes.BOLD}>
         ✓ Setup complete!
       </text>
       <text>
-        <span fg="#ffffff">Provider: </span>
-        <span fg="#56b6c2">{label}</span>
+        <span fg={SETUP_THEME.text}>Provider: </span>
+        <span fg={SETUP_THEME.primary}>{label}</span>
       </text>
-      <text fg={THEME_MUTED} attributes={TextAttributes.DIM}>
+      <text fg={SETUP_THEME.muted} attributes={TextAttributes.DIM}>
         {`Config saved to ${CONFIG_FILE}`}
       </text>
       <box style={{ marginTop: 1 }}>
-        <text fg="#ffffff">You can now start using OpenStudy CLI.</text>
+        <text fg={SETUP_THEME.text}>You can now start using OpenStudy CLI.</text>
       </box>
-      <text fg={THEME_MUTED} attributes={TextAttributes.DIM}>
+      <text fg={SETUP_THEME.muted} attributes={TextAttributes.DIM}>
         Press q or esc to exit.
       </text>
     </box>
@@ -128,6 +127,10 @@ export const SetupScreen = ({ onExit }: SetupScreenProps) => {
   const [step, setStep] = React.useState<Step>('welcome');
   const [provider, setProvider] = React.useState<Provider | null>(null);
   const [apiKey, setApiKey] = React.useState('');
+
+  useAppKeys(({ input, key }) => {
+    if (key.ctrl && input === 'c') onExit();
+  });
 
   const providerMeta = provider ? PROVIDER_METADATA.find(p => p.id === provider) : null;
 
