@@ -2,7 +2,9 @@ import React from 'react';
 import { TextAttributes } from '@opentui/core';
 import type { CommandContext, CommandModule } from '../../commands/index.js';
 import type { SessionPresentation } from '../session-presentation.js';
-import { SummaryMode, type ModeProps, type SummaryModeProps } from './modes/summary/SummaryMode.js';
+import { QuizMode } from './modes/quiz/QuizMode.js';
+import { useQuiz } from './modes/quiz/useQuiz.js';
+import { SummaryMode } from './modes/summary/SummaryMode.js';
 import { ModalHost, type ActiveModal, type ModalRenderContext, type ModalTrigger } from '../../modals/index.js';
 import { useSummary } from './modes/summary/useSummary.js';
 import { THEME } from '../../shared/theme.js';
@@ -14,21 +16,7 @@ import { APP_VERSION } from '../../shared/metadata.js';
 const SIDEBAR_WIDTH = 42;
 const WIDE_TERMINAL_BREAKPOINT = 120;
 
-// Inferred element return type keeps the components valid under OpenTUI's JSX namespace.
-type ModeComponent = (props: SummaryModeProps) => ReturnType<typeof SummaryMode>;
-
-interface SessionModeDefinition {
-  label: string;
-  Component: ModeComponent;
-}
-
-const SESSION_MODES: readonly SessionModeDefinition[] = [
-  { label: 'Summary', Component: SummaryMode },
-  { label: 'Quiz', Component: QuizMode },
-  { label: 'FlashCards', Component: FlashCardsMode },
-  { label: 'Exercises', Component: ExercisesMode },
-  { label: 'AI Teacher', Component: AiTeacherMode },
-];
+const SESSION_MODES = ['Summary', 'Quiz', 'FlashCards', 'Exercises', 'AI Teacher'] as const;
 
 interface SessionScreenProps {
   termWidth: number;
@@ -73,7 +61,15 @@ export const SessionScreen = ({
     materialPath: presentation.materialPath,
     studyLanguage: presentation.studyLanguage,
   });
-  const ActiveMode = SESSION_MODES[activeModeIndex]?.Component ?? SummaryMode;
+  const quizState = useQuiz({
+    enabled: activeModeIndex === 1,
+    sessionId,
+    modelProvider: presentation.modelProvider,
+    model: presentation.model,
+    reasoningEffort: presentation.reasoningEffort,
+    materialPath: presentation.materialPath,
+    studyLanguage: presentation.studyLanguage,
+  });
 
   const handleSessionSubmit = React.useCallback(() => {
     void commandContext.openModal('message', {
@@ -96,13 +92,25 @@ export const SessionScreen = ({
       <box style={{ flexGrow: 1, flexDirection: 'column', paddingLeft: 2, paddingRight: 2, paddingBottom: 1 }}>
         <box style={{ flexGrow: 1, flexDirection: 'column', width: contentWidth }}>
           <box style={{ height: 1, flexShrink: 0 }} />
-          <ActiveMode
-            contentWidth={contentWidth}
-            contentHeight={contentHeight}
-            summaryState={summaryState}
-            inputActive={inputActive}
-            commandMenuActive={commandMenuActive}
-          />
+          {activeModeIndex === 0 && (
+            <SummaryMode
+              contentWidth={contentWidth}
+              contentHeight={contentHeight}
+              summaryState={summaryState}
+              inputActive={inputActive}
+              commandMenuActive={commandMenuActive}
+            />
+          )}
+          {activeModeIndex === 1 && (
+            <QuizMode
+              contentWidth={contentWidth}
+              contentHeight={contentHeight}
+              quizState={quizState}
+              inputActive={inputActive}
+              commandMenuActive={commandMenuActive}
+            />
+          )}
+          {activeModeIndex > 1 && <ModePlaceholder name={SESSION_MODES[activeModeIndex] ?? 'Study mode'} />}
           <box style={{ flexGrow: 1 }} />
         </box>
 
@@ -112,7 +120,7 @@ export const SessionScreen = ({
             commands={commands}
             commandContext={commandContext}
             width={contentWidth}
-            inputActive={inputActive}
+            inputActive={inputActive && activeModeIndex !== 1}
             modalTriggers={modalTriggers}
             onModalTrigger={onModalTrigger}
             placeholder="Ask anything..."
@@ -166,7 +174,7 @@ export const SessionScreen = ({
 
                   return (
                     <box
-                      key={mode.label}
+                      key={mode}
                       style={{
                         flexDirection: 'row',
                         backgroundColor: active ? presentation.subjectColor : undefined,
@@ -179,7 +187,7 @@ export const SessionScreen = ({
                         fg={active ? THEME.onAccent : THEME.textMuted}
                         attributes={active ? TextAttributes.BOLD : TextAttributes.NONE}
                       >
-                        {mode.label}
+                        {mode}
                       </text>
                       {active && (
                         <text fg={THEME.onAccent} attributes={TextAttributes.BOLD}>
@@ -213,22 +221,6 @@ export const SessionScreen = ({
     </box>
   );
 };
-
-function QuizMode(_props: ModeProps) {
-  return <ModePlaceholder name="Quiz" />;
-}
-
-function FlashCardsMode(_props: ModeProps) {
-  return <ModePlaceholder name="FlashCards" />;
-}
-
-function ExercisesMode(_props: ModeProps) {
-  return <ModePlaceholder name="Exercises" />;
-}
-
-function AiTeacherMode(_props: ModeProps) {
-  return <ModePlaceholder name="AI Teacher" />;
-}
 
 function ModePlaceholder({ name }: { name: string }) {
   return (

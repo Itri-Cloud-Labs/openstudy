@@ -13,7 +13,7 @@ export function getSessionById(sessionId: string): StudySession | null {
 
 export function saveSessionResult(
   sessionId: string,
-  result: { title?: string; summary?: string },
+  result: { title?: string; summary?: string; quiz?: StudySession['modeResults']['quiz'] },
 ): StudySession | null {
   const persistence = getPersistence();
   const current = persistence.readStudySession(sessionId);
@@ -25,6 +25,7 @@ export function saveSessionResult(
     modeResults: {
       ...current.modeResults,
       summary: result.summary ?? current.modeResults.summary,
+      quiz: result.quiz ?? current.modeResults.quiz,
     },
   });
 }

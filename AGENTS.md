@@ -94,7 +94,7 @@ The intended experience is local-first, keyboard-driven, calm, and focused. User
 - Exercises
 - AI Teacher
 - `ctrl+l` rotates through modes inside `SessionScreen.tsx`.
-- Each mode currently has a placeholder component that renders the active mode name.
+- Summary and Quiz are implemented. FlashCards, Exercises, and AI Teacher remain placeholders.
 
 ## Development Workflow
 

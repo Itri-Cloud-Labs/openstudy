@@ -4,6 +4,7 @@ import { testRender } from '@opentui/react/test-utils';
 
 import { HomeScreen } from '../src/features/home/HomeScreen.tsx';
 import { SetupScreen } from '../src/features/setup/SetupScreen.tsx';
+import { QuizMode } from '../src/features/study-session/modes/quiz/QuizMode.tsx';
 import { render as renderMessage } from '../src/modals/message.tsx';
 import type { ModalRenderContext } from '../src/modals/types.ts';
 import { Logo } from '../src/shared/ui/Logo.tsx';
@@ -180,6 +181,58 @@ describe('OpenTUI rendering', () => {
       );
       assert.ok(lastSuggestionRow >= 0);
       assert.ok(promptRow > lastSuggestionRow);
+    } finally {
+      setup.renderer.destroy();
+    }
+  });
+
+  it('runs a quiz question through answer feedback and completion', async () => {
+    const setup = await testRender(
+      <QuizMode
+        contentWidth={60}
+        contentHeight={14}
+        inputActive
+        commandMenuActive={false}
+        quizState={{
+          status: 'ready',
+          quiz: {
+            questions: [
+              {
+                question: 'Which structure stores genetic information?',
+                choices: ['Cell wall', 'DNA', 'Water', 'Glucose'],
+                correctIndex: 1,
+                explanation: 'DNA stores hereditary information.',
+              },
+            ],
+          },
+        }}
+      />,
+      { width: 60, height: 14 },
+    );
+
+    try {
+      await setup.renderOnce();
+      assert.match(setup.captureCharFrame(), /> 1\. Cell wall/);
+      await new Promise(resolve => setTimeout(resolve, 20));
+
+      await setup.mockInput.typeText('2');
+      await new Promise(resolve => setTimeout(resolve, 20));
+      await setup.renderOnce();
+      assert.match(setup.captureCharFrame(), /> 2\. DNA/);
+
+      await setup.mockInput.pressKeys(['RETURN']);
+      await new Promise(resolve => setTimeout(resolve, 20));
+      await setup.renderOnce();
+      const feedbackFrame = setup.captureCharFrame();
+      assert.match(feedbackFrame, /Correct\./);
+      assert.match(feedbackFrame, /DNA stores hereditary information/);
+
+      await setup.mockInput.pressKeys(['RETURN']);
+      await new Promise(resolve => setTimeout(resolve, 20));
+      await setup.renderOnce();
+      const completeFrame = setup.captureCharFrame();
+      assert.match(completeFrame, /1 \/ 1/);
+      assert.match(completeFrame, /Perfect score\./);
     } finally {
       setup.renderer.destroy();
     }

@@ -4,7 +4,7 @@ Study with an AI without leaving your terminal.
 
 OpenStudy gives a study session enough context to be useful: your subject, model, reasoning level, source material, and preferred language. Pick those once, write a prompt, and keep the rest of the screen quiet.
 
-It is a young project. Summary mode works. Quiz, FlashCards, Exercises, AI Teacher, and follow-up prompts are visible in the interface but are not wired up yet.
+It is a young project. Summary and Quiz modes work. FlashCards, Exercises, AI Teacher, and follow-up prompts are visible in the interface but are not wired up yet.
 
 ## What works today
 
@@ -13,6 +13,7 @@ It is a young project. Summary mode works. Quiz, FlashCards, Exercises, AI Teach
 - Model and reasoning options discovered from the selected provider
 - Local files and HTTP or HTTPS documents as study material
 - AI-generated summaries with structured sections
+- Five-question quizzes with immediate feedback and saved question sets
 - Saved preferences and study sessions under `~/.openstudy`
 - A setup wizard and slash commands for setup, sessions, and exit
 
