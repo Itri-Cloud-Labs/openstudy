@@ -129,4 +129,45 @@ describe('OpenTUI rendering', () => {
       setup.renderer.destroy();
     }
   });
+
+  it('positions slash command suggestions above the prompt', async () => {
+    const noop = () => {};
+    const commands = [
+      { config: { name: 'exit', description: 'Exit the cli' }, execute: noop },
+      { config: { name: 'sessions', description: 'Open saved sessions' }, execute: noop },
+      { config: { name: 'setup', description: 'Start setup' }, execute: noop },
+    ];
+    const setup = await testRender(
+      <box style={{ flexDirection: 'column', width: 60, height: 12 }}>
+        <box style={{ height: 6, flexShrink: 0 }} />
+        <PromptInput
+          onSubmit={noop}
+          commands={commands}
+          commandContext={{ onExit: noop, onSetup: noop, openModal: noop, closeModal: noop }}
+          width={50}
+          inputActive
+          modalTriggers={[]}
+          onModalTrigger={noop}
+          placeholder="Ask anything"
+        />
+      </box>,
+      { width: 60, height: 12 },
+    );
+
+    try {
+      await setup.renderOnce();
+      await setup.mockInput.typeText('/');
+      await new Promise(resolve => setTimeout(resolve, 10));
+      await setup.renderOnce();
+      const lines = setup.captureCharFrame().split('\n');
+      const lastSuggestionRow = lines.findIndex(line => line.includes('/setup'));
+      const promptRow = lines.findIndex(
+        (line, index) => index > lastSuggestionRow && line.includes('/') && !line.includes('/setup'),
+      );
+      assert.ok(lastSuggestionRow >= 0);
+      assert.ok(promptRow > lastSuggestionRow);
+    } finally {
+      setup.renderer.destroy();
+    }
+  });
 });

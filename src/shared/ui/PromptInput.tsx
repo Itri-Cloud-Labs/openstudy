@@ -14,6 +14,7 @@ const INPUT_PADDING_X = 2;
 const MIN_INPUT_LINES = 1;
 const MAX_VISIBLE_INPUT_LINES = 10;
 const MAX_MENU_ITEMS = 10;
+const MENU_BORDER_ROWS = 2;
 
 // Side-less single border: only the left/right vertical rails are drawn.
 const RAIL_BORDER = {
@@ -90,7 +91,7 @@ export const PromptInput = ({
   }, [menuVisible, onMenuVisibleChange]);
   const menuItems = menuVisible ? suggestions : [];
   const menuRowCount = Math.max(1, menuItems.length);
-  const menuTop = -menuRowCount;
+  const menuTop = -(menuRowCount + MENU_BORDER_ROWS);
   const menuInnerWidth = Math.max(1, width - 4);
   const commandWidth = Math.max(0, ...commands.map(command => command.config.name.length + 1)) + 2;
 
