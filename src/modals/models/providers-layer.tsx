@@ -1,4 +1,4 @@
-import { Box, Text } from 'ink';
+import { TextAttributes } from '@opentui/core';
 import { truncateError } from '../../shared/text.js';
 import { focusTextColor } from '../../utils/colors.js';
 import type { ModalRenderProps } from '../types.js';
@@ -12,18 +12,18 @@ export function ProviderLayer({ modal, context }: ModalRenderProps<ModelsProvide
 
   return (
     <>
-      <Box justifyContent="space-between" marginBottom={1}>
-        <Text color={THEME.text} bold>
+      <box style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 1 }}>
+        <text fg={THEME.text} attributes={TextAttributes.BOLD}>
           Select Provider
-        </Text>
-        <Text color={THEME.textMuted}>esc</Text>
-      </Box>
-      <Box marginBottom={1}>
-        <Text color={THEME.textMuted}>Choose a provider before selecting a model.</Text>
-      </Box>
-      <Box flexDirection="column" marginBottom={1}>
+        </text>
+        <text fg={THEME.textMuted}>esc</text>
+      </box>
+      <box style={{ marginBottom: 1 }}>
+        <text fg={THEME.textMuted}>Choose a provider before selecting a model.</text>
+      </box>
+      <box style={{ flexDirection: 'column', marginBottom: 1 }}>
         {providers.length === 0 ? (
-          <Text color={THEME.textMuted}>No providers available</Text>
+          <text fg={THEME.textMuted}>No providers available</text>
         ) : (
           providers.map((provider, index) => {
             const isSelected = modal.selected === index;
@@ -38,28 +38,37 @@ export function ProviderLayer({ modal, context }: ModalRenderProps<ModelsProvide
                     : status;
 
             return (
-              <Box
+              <box
                 key={provider.id}
-                backgroundColor={isSelected ? subjectColor : undefined}
-                justifyContent="space-between"
+                style={{
+                  flexDirection: 'row',
+                  backgroundColor: isSelected ? subjectColor : undefined,
+                  justifyContent: 'space-between',
+                }}
               >
-                <Text color={isSelected ? THEME.onAccent : THEME.text} bold={isSelected}>
+                <text
+                  fg={isSelected ? THEME.onAccent : THEME.text}
+                  attributes={isSelected ? TextAttributes.BOLD : TextAttributes.NONE}
+                >
                   {provider.label}
-                </Text>
-                <Text color={focusTextColor(getProviderStatusColor(status), subjectColor, isSelected)} bold>
+                </text>
+                <text
+                  fg={focusTextColor(getProviderStatusColor(status), subjectColor, isSelected)}
+                  attributes={TextAttributes.BOLD}
+                >
                   {statusLabel}
-                </Text>
-              </Box>
+                </text>
+              </box>
             );
           })
         )}
-      </Box>
-      <Box justifyContent="space-between">
-        <Text color={modal.error ? THEME.danger : THEME.textMuted}>
+      </box>
+      <box style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
+        <text fg={modal.error ? THEME.danger : THEME.textMuted}>
           {modal.error ? truncateError(modal.error) : providers.length === 0 ? 'providers unavailable' : '↑↓ move'}
-        </Text>
-        <Text color={THEME.textMuted}>enter continue</Text>
-      </Box>
+        </text>
+        <text fg={THEME.textMuted}>enter continue</text>
+      </box>
     </>
   );
 }

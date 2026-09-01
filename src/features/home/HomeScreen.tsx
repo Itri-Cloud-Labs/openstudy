@@ -1,4 +1,4 @@
-import { Box, Text } from 'ink';
+import { TextAttributes } from '@opentui/core';
 import type { CommandContext, CommandModule } from '../../commands/index.js';
 import { Logo } from '../../shared/ui/Logo.js';
 import { PromptInput } from '../../shared/ui/PromptInput.js';
@@ -40,14 +40,14 @@ export function HomeScreen({ width, height, promptWidth, presentation, input, ov
   const topPadding = Math.max(2, Math.floor((height - contentHeight) / 2));
 
   return (
-    <Box flexDirection="column" width={width} height={height} backgroundColor={THEME.background}>
-      <Box height={topPadding} flexShrink={0} />
+    <box style={{ flexDirection: 'column', width, height, backgroundColor: THEME.background }}>
+      <box style={{ height: topPadding, flexShrink: 0 }} />
 
-      <Box justifyContent="center" marginBottom={2}>
+      <box style={{ flexDirection: 'row', justifyContent: 'center', marginBottom: 2 }}>
         <Logo />
-      </Box>
+      </box>
 
-      <Box justifyContent="center">
+      <box style={{ flexDirection: 'row', justifyContent: 'center' }}>
         <PromptInput
           onSubmit={input.onSubmit}
           commands={input.commands}
@@ -64,45 +64,49 @@ export function HomeScreen({ width, height, promptWidth, presentation, input, ov
           material={presentation.material}
           studyLanguage={presentation.studyLanguage}
         />
-      </Box>
+      </box>
 
-      <Box justifyContent="center" marginTop={1}>
-        <Box width={promptWidth} justifyContent="flex-end">
-          <Text dimColor>
-            <Text color={THEME.text}>tab</Text>
-            <Text color={THEME.textFaint}> subject </Text>
-            <Text color={THEME.text}>ctrl+m</Text>
-            <Text color={THEME.textFaint}> model </Text>
-            <Text color={THEME.text}>ctrl+r</Text>
-            <Text color={THEME.textFaint}> reasoning </Text>
-            <Text color={THEME.text}>ctrl+f</Text>
-            <Text color={THEME.textFaint}> material </Text>
-            <Text color={THEME.text}>ctrl+l</Text>
-            <Text color={THEME.textFaint}> language</Text>
-          </Text>
-        </Box>
-      </Box>
+      <box style={{ flexDirection: 'row', justifyContent: 'center', marginTop: 1 }}>
+        <box style={{ width: promptWidth, flexDirection: 'row', justifyContent: 'flex-end' }}>
+          <text>
+            <span fg={THEME.text}>tab</span>
+            <span fg={THEME.textFaint}> subject </span>
+            <span fg={THEME.text}>ctrl+m</span>
+            <span fg={THEME.textFaint}> model </span>
+            <span fg={THEME.text}>ctrl+r</span>
+            <span fg={THEME.textFaint}> reasoning </span>
+            <span fg={THEME.text}>ctrl+f</span>
+            <span fg={THEME.textFaint}> material </span>
+            <span fg={THEME.text}>ctrl+l</span>
+            <span fg={THEME.textFaint}> language</span>
+          </text>
+        </box>
+      </box>
 
-      <Box justifyContent="center" marginTop={2}>
-        <Box width={promptWidth}>
-          <Text color={THEME.primary}>{'● '}</Text>
-          <Text color={THEME.primary} bold>
-            Tip
-          </Text>
-          <Text color={THEME.textFaint}>{` ${presentation.tip}`}</Text>
-        </Box>
-      </Box>
+      <box style={{ flexDirection: 'row', justifyContent: 'center', marginTop: 2 }}>
+        <box style={{ width: promptWidth, flexDirection: 'row' }}>
+          <text>
+            <span fg={THEME.primary}>{'● '}</span>
+            <span fg={THEME.primary} attributes={TextAttributes.BOLD}>
+              Tip
+            </span>
+            <span fg={THEME.textFaint}>{` ${presentation.tip}`}</span>
+          </text>
+        </box>
+      </box>
 
-      <Box flexGrow={1} />
+      <box style={{ flexGrow: 1 }} />
 
-      <Box flexDirection="row" justifyContent="space-between" paddingX={2}>
-        <Text color={THEME.textFaint}>{presentation.cwd}</Text>
-        <Text color={THEME.textFaint}>{APP_VERSION}</Text>
-      </Box>
+      <box style={{ flexDirection: 'row', justifyContent: 'space-between', paddingLeft: 2, paddingRight: 2 }}>
+        <text fg={THEME.textFaint}>{presentation.cwd}</text>
+        <text fg={THEME.textFaint} attributes={TextAttributes.DIM}>
+          {APP_VERSION}
+        </text>
+      </box>
 
       {overlay.modal && (
         <ModalHost modal={overlay.modal} termWidth={width} termHeight={height} context={overlay.context} />
       )}
-    </Box>
+    </box>
   );
 }

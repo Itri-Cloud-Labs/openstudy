@@ -1,4 +1,4 @@
-import { Box, Text } from 'ink';
+import { TextAttributes } from '@opentui/core';
 import { THEME } from '../../shared/theme.js';
 import type { ModalRenderProps } from '../types.js';
 import type { ModelsSubProvidersState } from './state.js';
@@ -13,36 +13,39 @@ export function SubProvidersLayer({ modal, context }: ModalRenderProps<ModelsSub
 
   return (
     <>
-      <Box justifyContent="space-between" marginBottom={1}>
-        <Text color={THEME.text} bold>
+      <box style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 1 }}>
+        <text fg={THEME.text} attributes={TextAttributes.BOLD}>
           {getProviderLabel(modal.provider)}
-        </Text>
-        <Text color={THEME.textMuted}>esc</Text>
-      </Box>
-      <Box marginBottom={1}>
-        <Text color={THEME.textMuted}>Select a subprovider.</Text>
-      </Box>
-      <Box flexDirection="column" marginBottom={1}>
+        </text>
+        <text fg={THEME.textMuted}>esc</text>
+      </box>
+      <box style={{ marginBottom: 1 }}>
+        <text fg={THEME.textMuted}>Select a subprovider.</text>
+      </box>
+      <box style={{ flexDirection: 'column', marginBottom: 1 }}>
         {visibleSubProviders.length === 0 ? (
-          <Text color={THEME.textMuted}>No providers available</Text>
+          <text fg={THEME.textMuted}>No providers available</text>
         ) : (
           visibleSubProviders.map((sp, index) => {
             const spIndex = windowStart + index;
             const isSelected = modal.selected === spIndex;
             return (
-              <Box key={sp.id} backgroundColor={isSelected ? subjectColor : undefined}>
-                <Text color={isSelected ? THEME.onAccent : THEME.text} bold={isSelected}>
+              <box key={sp.id} style={{ backgroundColor: isSelected ? subjectColor : undefined }}>
+                <text
+                  fg={isSelected ? THEME.onAccent : THEME.text}
+                  attributes={isSelected ? TextAttributes.BOLD : TextAttributes.NONE}
+                >
                   {sp.name}
-                </Text>
-              </Box>
+                </text>
+              </box>
             );
           })
         )}
-      </Box>
-      <Box justifyContent="space-between">
-        <Text color={THEME.textMuted}>← back ↑↓ move</Text>
-        <Text color={THEME.textMuted}>enter continue</Text>
-      </Box>
+      </box>
+      <box style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
+        <text fg={THEME.textMuted}>← back ↑↓ move</text>
+        <text fg={THEME.textMuted}>enter continue</text>
+      </box>
     </>
   );
 }

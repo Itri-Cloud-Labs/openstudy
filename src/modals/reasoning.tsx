@@ -1,4 +1,4 @@
-import { Box, Text } from 'ink';
+import { TextAttributes } from '@opentui/core';
 import { createProvider, type ProviderReasoningLevel } from '../providers/index.js';
 import { focusTextColor } from '../utils/colors.js';
 import { createHandleInput, isCancel, isSubmit } from './input.js';
@@ -55,18 +55,18 @@ export function render({ modal, context }: ModalRenderProps<ReasoningModalState>
   if ('error' in state) {
     return (
       <>
-        <Box justifyContent="space-between" marginBottom={1}>
-          <Text color={THEME.text} bold>
+        <box style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 1 }}>
+          <text fg={THEME.text} attributes={TextAttributes.BOLD}>
             Select Reasoning
-          </Text>
-          <Text color={THEME.textMuted}>esc</Text>
-        </Box>
-        <Box marginBottom={1}>
-          <Text color={THEME.danger}>{state.error}</Text>
-        </Box>
-        <Box justifyContent="flex-end">
-          <Text color={THEME.textMuted}>enter close</Text>
-        </Box>
+          </text>
+          <text fg={THEME.textMuted}>esc</text>
+        </box>
+        <box style={{ marginBottom: 1 }}>
+          <text fg={THEME.danger}>{state.error}</text>
+        </box>
+        <box style={{ flexDirection: 'row', justifyContent: 'flex-end' }}>
+          <text fg={THEME.textMuted}>enter close</text>
+        </box>
       </>
     );
   }
@@ -78,37 +78,47 @@ export function render({ modal, context }: ModalRenderProps<ReasoningModalState>
 
   return (
     <>
-      <Box justifyContent="space-between" marginBottom={1}>
-        <Text color={THEME.text} bold>
+      <box style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 1 }}>
+        <text fg={THEME.text} attributes={TextAttributes.BOLD}>
           {state.providerLabel}/{state.model}
-        </Text>
-        <Text color={THEME.textMuted}>esc</Text>
-      </Box>
-      <Box marginBottom={1}>
-        <Text color={THEME.textMuted}>Select a reasoning level.</Text>
-      </Box>
-      <Box flexDirection="column" marginBottom={1}>
+        </text>
+        <text fg={THEME.textMuted}>esc</text>
+      </box>
+      <box style={{ marginBottom: 1 }}>
+        <text fg={THEME.textMuted}>Select a reasoning level.</text>
+      </box>
+      <box style={{ flexDirection: 'column', marginBottom: 1 }}>
         {visibleLevels.map((level, index) => {
           const levelIndex = windowStart + index;
           const isSelected = state.selected === levelIndex;
           const isCurrent = context.preferences.reasoningEffort === level.value;
 
           return (
-            <Box key={level.id} backgroundColor={isSelected ? subjectColor : undefined} justifyContent="space-between">
-              <Text color={isSelected ? THEME.onAccent : THEME.text} bold={isSelected}>
+            <box
+              key={level.id}
+              style={{
+                flexDirection: 'row',
+                backgroundColor: isSelected ? subjectColor : undefined,
+                justifyContent: 'space-between',
+              }}
+            >
+              <text
+                fg={isSelected ? THEME.onAccent : THEME.text}
+                attributes={isSelected ? TextAttributes.BOLD : TextAttributes.NONE}
+              >
                 {level.label}
-              </Text>
-              {isCurrent && <Text color={focusTextColor(THEME.success, subjectColor, isSelected)}>current</Text>}
-            </Box>
+              </text>
+              {isCurrent && <text fg={focusTextColor(THEME.success, subjectColor, isSelected)}>current</text>}
+            </box>
           );
         })}
-      </Box>
-      <Box justifyContent="space-between">
-        <Text color={THEME.textMuted}>
-          ↑↓ move {windowStart + 1}-{windowStart + visibleLevels.length}/{state.levels.length}
-        </Text>
-        <Text color={THEME.textMuted}>enter select</Text>
-      </Box>
+      </box>
+      <box style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
+        <text fg={THEME.textMuted}>
+          {`↑↓ move ${windowStart + 1}-${windowStart + visibleLevels.length}/${state.levels.length}`}
+        </text>
+        <text fg={THEME.textMuted}>enter select</text>
+      </box>
     </>
   );
 }

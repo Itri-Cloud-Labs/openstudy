@@ -1,73 +1,53 @@
-#!/usr/bin/env node
-import { render } from 'ink';
+#!/usr/bin/env bun
+import { createCliRenderer } from '@opentui/core';
+import { createRoot } from '@opentui/react';
 import { App } from './app/App.js';
 import { closeProviders } from './providers/index.js';
+import { THEME } from './shared/theme.js';
 import { isFirstLaunch } from './utils/config.js';
 
-const ANSI_ENABLE_MOUSE_POINTER = '\x1b[?1000h\x1b[?1006h';
-const ANSI_DISABLE_MOUSE_POINTER = '\x1b[?1000l\x1b[?1002l\x1b[?1003l\x1b[?1005l\x1b[?1006l\x1b[?1015l\x1b[?1007l';
+const firstLaunch = isFirstLaunch();
 
-function writeTerminal(sequence: string): void {
-  if (!process.stdout.isTTY || !process.stdout.writable) return;
-  try {
-    process.stdout.write(sequence);
-  } catch {
-    // Terminal restoration is best-effort during shutdown.
-  }
-}
-
-let mousePointerEnabled = false;
 let shuttingDown = false;
-let unmountApp: (() => void) | undefined;
+let renderer: Awaited<ReturnType<typeof createCliRenderer>> | undefined;
 
-function enableDefaultMousePointer(): void {
-  if (mousePointerEnabled || shuttingDown) return;
-  writeTerminal(ANSI_ENABLE_MOUSE_POINTER);
-  mousePointerEnabled = true;
-}
-
-function restoreMousePointer(): void {
-  writeTerminal(ANSI_DISABLE_MOUSE_POINTER);
-  mousePointerEnabled = false;
-}
-
-function shutdownApp(): void {
-  if (shuttingDown) return;
+async function shutdownApp(code = 0, error?: unknown): Promise<never> {
+  if (shuttingDown) process.exit(code ?? 0);
   shuttingDown = true;
-  void closeProviders();
-  unmountApp?.();
-  restoreMousePointer();
-}
 
-function exitApp(code: number): never {
-  shutdownApp();
+  renderer?.destroy();
+  try {
+    await closeProviders();
+  } catch (cleanupError) {
+    error ??= cleanupError;
+  }
+  if (error) console.error(error);
   process.exit(code);
 }
 
 function registerProcessHandlers(): void {
   for (const signal of ['SIGINT', 'SIGTERM', 'SIGHUP'] as const) {
-    process.once(signal, () => exitApp(0));
+    process.once(signal, () => void shutdownApp(0));
   }
 
   process.once('uncaughtException', error => {
-    shutdownApp();
-    throw error;
+    void shutdownApp(1, error);
   });
   process.once('unhandledRejection', error => {
-    shutdownApp();
-    throw error;
+    void shutdownApp(1, error);
   });
-  process.once('beforeExit', restoreMousePointer);
-  process.once('exit', restoreMousePointer);
 }
 
-const firstLaunch = isFirstLaunch();
-restoreMousePointer();
 registerProcessHandlers();
 
-const { unmount } = render(<App firstLaunch={firstLaunch} onExit={() => shutdownApp()} />, {
-  alternateScreen: true,
-  onRender: enableDefaultMousePointer,
+renderer = await createCliRenderer({
+  // The renderer owns the alternate screen, mouse reporting, and terminal
+  // restoration; the app only owns provider cleanup and exit semantics.
+  screenMode: 'alternate-screen',
+  backgroundColor: THEME.background,
+  // ctrl+c is handled by the app: it closes an open modal first and exits
+  // from the home/session prompt.
+  exitOnCtrlC: false,
 });
 
-unmountApp = unmount;
+createRoot(renderer).render(<App firstLaunch={firstLaunch} onExit={() => void shutdownApp(0)} />);

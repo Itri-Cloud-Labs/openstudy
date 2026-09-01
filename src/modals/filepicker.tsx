@@ -1,4 +1,4 @@
-import { Box, Text } from 'ink';
+import { TextAttributes } from '@opentui/core';
 import { materialService, type MaterialEntry } from '../infrastructure/materials/index.js';
 import { truncateError } from '../shared/text.js';
 import { focusTextColor } from '../utils/colors.js';
@@ -45,33 +45,43 @@ function SourceLayer({ modal, context }: ModalRenderProps<Extract<FilePickerModa
 
   return (
     <>
-      <Box justifyContent="space-between" marginBottom={1}>
-        <Text color={THEME.text} bold>
+      <box style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 1 }}>
+        <text fg={THEME.text} attributes={TextAttributes.BOLD}>
           Add Material
-        </Text>
-        <Text color={THEME.textMuted}>esc</Text>
-      </Box>
-      <Box marginBottom={1}>
-        <Text color={THEME.textMuted}>Choose where your document comes from.</Text>
-      </Box>
-      <Box flexDirection="column" marginBottom={1}>
+        </text>
+        <text fg={THEME.textMuted}>esc</text>
+      </box>
+      <box style={{ marginBottom: 1 }}>
+        <text fg={THEME.textMuted}>Choose where your document comes from.</text>
+      </box>
+      <box style={{ flexDirection: 'column', marginBottom: 1 }}>
         {SOURCE_OPTIONS.map((option, index) => {
           const isSelected = modal.selected === index;
 
           return (
-            <Box key={option.id} backgroundColor={isSelected ? subjectColor : undefined} justifyContent="space-between">
-              <Text color={isSelected ? THEME.onAccent : THEME.text} bold={isSelected}>
+            <box
+              key={option.id}
+              style={{
+                flexDirection: 'row',
+                backgroundColor: isSelected ? subjectColor : undefined,
+                justifyContent: 'space-between',
+              }}
+            >
+              <text
+                fg={isSelected ? THEME.onAccent : THEME.text}
+                attributes={isSelected ? TextAttributes.BOLD : TextAttributes.NONE}
+              >
                 {option.label}
-              </Text>
-              <Text color={isSelected ? THEME.onAccent : THEME.textMuted}>{option.description}</Text>
-            </Box>
+              </text>
+              <text fg={isSelected ? THEME.onAccent : THEME.textMuted}>{option.description}</text>
+            </box>
           );
         })}
-      </Box>
-      <Box justifyContent="space-between">
-        <Text color={modal.error ? THEME.danger : THEME.textMuted}>{modal.error ?? '↑↓ move'}</Text>
-        <Text color={THEME.textMuted}>enter continue</Text>
-      </Box>
+      </box>
+      <box style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
+        <text fg={modal.error ? THEME.danger : THEME.textMuted}>{modal.error ?? '↑↓ move'}</text>
+        <text fg={THEME.textMuted}>enter continue</text>
+      </box>
     </>
   );
 }
@@ -79,25 +89,27 @@ function SourceLayer({ modal, context }: ModalRenderProps<Extract<FilePickerModa
 function UrlLayer({ modal }: { modal: Extract<FilePickerModalState, { layer: 'url' }> }) {
   return (
     <>
-      <Box justifyContent="space-between" marginBottom={1}>
-        <Text color={THEME.text} bold>
+      <box style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 1 }}>
+        <text fg={THEME.text} attributes={TextAttributes.BOLD}>
           Material URL
-        </Text>
-        <Text color={THEME.textMuted}>esc</Text>
-      </Box>
-      <Box marginBottom={1}>
-        <Text color={THEME.textMuted}>Enter a direct document URL. Use ctrl+v to paste from clipboard.</Text>
-      </Box>
-      <Box backgroundColor={THEME.backgroundRaised} paddingX={1} marginBottom={1}>
-        <Text color={modal.url ? THEME.text : THEME.textMuted}>{modal.url || 'https://example.com/document.pdf'}</Text>
-        {!modal.downloading && <Text color={THEME.primary}>█</Text>}
-      </Box>
-      <Box justifyContent="space-between">
-        <Text color={modal.error ? THEME.danger : THEME.textMuted}>
+        </text>
+        <text fg={THEME.textMuted}>esc</text>
+      </box>
+      <box style={{ marginBottom: 1 }}>
+        <text fg={THEME.textMuted}>Enter a direct document URL. Use ctrl+v to paste from clipboard.</text>
+      </box>
+      <box style={{ backgroundColor: THEME.backgroundRaised, paddingLeft: 1, paddingRight: 1, marginBottom: 1 }}>
+        <text>
+          <span fg={modal.url ? THEME.text : THEME.textMuted}>{modal.url || 'https://example.com/document.pdf'}</span>
+          {!modal.downloading && <span fg={THEME.primary}>█</span>}
+        </text>
+      </box>
+      <box style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
+        <text fg={modal.error ? THEME.danger : THEME.textMuted}>
           {modal.error ? truncateError(modal.error) : '← sources'}
-        </Text>
-        <Text color={THEME.textMuted}>{modal.downloading ? 'downloading...' : 'enter download'}</Text>
-      </Box>
+        </text>
+        <text fg={THEME.textMuted}>{modal.downloading ? 'downloading...' : 'enter download'}</text>
+      </box>
     </>
   );
 }
@@ -111,18 +123,18 @@ function BrowserLayer({ modal, context }: ModalRenderProps<Extract<FilePickerMod
 
   return (
     <>
-      <Box justifyContent="space-between" marginBottom={1}>
-        <Text color={THEME.text} bold>
+      <box style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 1 }}>
+        <text fg={THEME.text} attributes={TextAttributes.BOLD}>
           Select Material
-        </Text>
-        <Text color={THEME.textMuted}>esc</Text>
-      </Box>
-      <Box marginBottom={1}>
-        <Text color={THEME.textMuted}>{materialService.shortenPath(state.cwd)}</Text>
-      </Box>
-      <Box flexDirection="column" marginBottom={1}>
+        </text>
+        <text fg={THEME.textMuted}>esc</text>
+      </box>
+      <box style={{ marginBottom: 1 }}>
+        <text fg={THEME.textMuted}>{materialService.shortenPath(state.cwd)}</text>
+      </box>
+      <box style={{ flexDirection: 'column', marginBottom: 1 }}>
         {visibleEntries.length === 0 ? (
-          <Text color={THEME.textMuted}>No documents found</Text>
+          <text fg={THEME.textMuted}>No documents found</text>
         ) : (
           visibleEntries.map((entry, index) => {
             const entryIndex = windowStart + index;
@@ -130,36 +142,45 @@ function BrowserLayer({ modal, context }: ModalRenderProps<Extract<FilePickerMod
             const iconColor = entry.type === 'directory' ? subjectColor : THEME.textMuted;
 
             return (
-              <Box
+              <box
                 key={entry.path}
-                backgroundColor={isSelected ? subjectColor : undefined}
-                justifyContent="space-between"
+                style={{
+                  flexDirection: 'row',
+                  backgroundColor: isSelected ? subjectColor : undefined,
+                  justifyContent: 'space-between',
+                }}
               >
-                <Text color={focusTextColor(iconColor, subjectColor, isSelected)} bold={isSelected}>
+                <text
+                  fg={focusTextColor(iconColor, subjectColor, isSelected)}
+                  attributes={isSelected ? TextAttributes.BOLD : TextAttributes.NONE}
+                >
                   {entry.type === 'directory' ? '▸ ' : '  '}
-                </Text>
-                <Text color={isSelected ? THEME.onAccent : THEME.text} bold={isSelected}>
+                </text>
+                <text
+                  fg={isSelected ? THEME.onAccent : THEME.text}
+                  attributes={isSelected ? TextAttributes.BOLD : TextAttributes.NONE}
+                >
                   {entry.name}
-                </Text>
-                <Text color={isSelected ? THEME.onAccent : THEME.textMuted}>
+                </text>
+                <text fg={isSelected ? THEME.onAccent : THEME.textMuted}>
                   {entry.type === 'directory' ? 'dir' : 'file'}
-                </Text>
-              </Box>
+                </text>
+              </box>
             );
           })
         )}
-      </Box>
-      <Box justifyContent="space-between">
-        <Text color={state.error ? THEME.danger : THEME.textMuted}>
+      </box>
+      <box style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
+        <text fg={state.error ? THEME.danger : THEME.textMuted}>
           {state.error ? truncateError(state.error) : state.cwd === HOME_DIR ? '← sources' : '← parent'}
-        </Text>
-        <Text color={THEME.textMuted}>enter open/select</Text>
-      </Box>
-      <Box justifyContent="flex-end">
-        <Text color={THEME.textMuted}>
-          {windowStart + 1}-{windowStart + visibleEntries.length}/{state.entries.length}
-        </Text>
-      </Box>
+        </text>
+        <text fg={THEME.textMuted}>enter open/select</text>
+      </box>
+      <box style={{ flexDirection: 'row', justifyContent: 'flex-end' }}>
+        <text fg={THEME.textMuted}>
+          {`${windowStart + 1}-${windowStart + visibleEntries.length}/${state.entries.length}`}
+        </text>
+      </box>
     </>
   );
 }

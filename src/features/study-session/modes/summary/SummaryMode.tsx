@@ -1,10 +1,11 @@
 import React from 'react';
-import { Box, Text, useInput } from 'ink';
-import { lexer, type Token, type Tokens } from 'marked';
-import { type SummaryState } from './useSummary.js';
+import { TextAttributes } from '@opentui/core';
+import type { MouseEvent } from '@opentui/core';
+import { type Token, type Tokens, lexer } from 'marked';
+import type { SummaryState } from './useSummary.js';
 import { THEME } from '../../../../shared/theme.js';
 import { truncate } from '../../../../shared/text.js';
-import { isTerminalMouseReport, parseMouseWheelScroll } from '../../../../utils/input.js';
+import { useAppKeys } from '../../../../shared/terminal/keymap.js';
 
 type SummaryLine = {
   text: string;
@@ -66,17 +67,18 @@ export function SummaryMode({
     };
   }, [summaryState.status]);
 
-  useInput(
-    (input, key) => {
-      const mouseScroll = parseMouseWheelScroll(input);
-      if (mouseScroll !== 0) {
-        if (summaryState.status === 'ready') {
-          setScroll(current => Math.max(0, Math.min(maxScroll, current + mouseScroll)));
-        }
-        return;
-      }
+  const handleWheel = React.useCallback(
+    (event: MouseEvent) => {
+      if (summaryState.status !== 'ready') return;
+      const direction = event.scroll?.direction;
+      if (direction === 'up') setScroll(current => Math.max(0, current - 3));
+      if (direction === 'down') setScroll(current => Math.min(maxScroll, current + 3));
+    },
+    [maxScroll, summaryState.status],
+  );
 
-      if (isTerminalMouseReport(input)) return;
+  useAppKeys(
+    ({ key }) => {
       if (summaryState.status !== 'ready') return;
 
       if (key.pageUp) {
@@ -112,27 +114,31 @@ export function SummaryMode({
   );
 
   return (
-    <Box flexDirection="column">
-      <Box marginTop={1} marginBottom={1} justifyContent="space-between">
-        <Text color={THEME.text} bold>
+    <box style={{ flexDirection: 'column' }}>
+      <box style={{ flexDirection: 'row', marginTop: 1, marginBottom: 1, justifyContent: 'space-between' }}>
+        <text fg={THEME.text} attributes={TextAttributes.BOLD}>
           Summary
-        </Text>
-        <Text color={THEME.textMuted}>{getSummaryStatusLabel(summaryState.status, maxScroll)}</Text>
-      </Box>
+        </text>
+        <text fg={THEME.textMuted}>{getSummaryStatusLabel(summaryState.status, maxScroll)}</text>
+      </box>
 
-      <Box height={visibleRows} flexDirection="row" overflow="hidden">
-        <Box width={Math.max(1, contentWidth - (maxScroll > 0 ? 2 : 0))} flexDirection="column">
+      <box style={{ height: visibleRows, flexDirection: 'row', overflow: 'hidden' }} onMouseScroll={handleWheel}>
+        <box style={{ width: Math.max(1, contentWidth - (maxScroll > 0 ? 2 : 0)), flexDirection: 'column' }}>
           {visibleLines.map((line, index) => (
-            <Text key={`${scroll + index}:${line.text}`} color={line.color} bold={line.bold} dimColor={line.dim}>
+            <text
+              key={`${scroll + index}:${line.text}`}
+              fg={line.color}
+              attributes={line.bold ? TextAttributes.BOLD : line.dim ? TextAttributes.DIM : TextAttributes.NONE}
+            >
               {line.text || ' '}
-            </Text>
+            </text>
           ))}
-        </Box>
+        </box>
         {maxScroll > 0 && (
           <ScrollBar height={visibleRows} scroll={scroll} totalRows={lines.length} visibleRows={visibleRows} />
         )}
-      </Box>
-    </Box>
+      </box>
+    </box>
   );
 }
 
@@ -154,17 +160,17 @@ function ScrollBar({
   const thumbTop = Math.min(maxThumbTop, Math.round((scroll / maxScroll) * maxThumbTop));
 
   return (
-    <Box width={2} flexDirection="column" alignItems="flex-end">
+    <box style={{ width: 2, flexDirection: 'column', alignItems: 'flex-end' }}>
       {Array.from({ length: trackHeight }, (_, index) => {
         const active = index >= thumbTop && index < thumbTop + thumbHeight;
 
         return (
-          <Text key={index} color={active ? THEME.primary : THEME.rule}>
+          <text key={index} fg={active ? THEME.primary : THEME.rule}>
             {active ? '█' : '│'}
-          </Text>
+          </text>
         );
       })}
-    </Box>
+    </box>
   );
 }
 

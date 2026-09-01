@@ -1,19 +1,17 @@
 # OpenStudy development guide
 
-OpenStudy is a local-first terminal study assistant built with Ink, React, and TypeScript. `src` is the source of truth; `dist` is disposable build output.
+OpenStudy is a local-first terminal study assistant built with OpenTUI, React, and TypeScript. `src` is the source of truth; `dist` is disposable build output.
 
 ## Prerequisites
 
-- Node.js 22 or newer. Ink 7 does not support older Node.js releases.
+- [Bun](https://bun.sh) 1.3 or newer. The OpenTUI renderer loads its native Zig core through Bun; a plain Node.js runtime is not supported.
 - npm 10 or newer.
 - A terminal at least `73x23` for interactive testing.
-
-If you use nvm, run `nvm use`; the repository's `.nvmrc` selects the minimum supported Node.js release.
 
 Install exactly what is recorded in the lockfile:
 
 ```bash
-npm ci
+bun install --frozen-lockfile
 ```
 
 ## Daily workflow
@@ -31,10 +29,10 @@ npm run check
 
 | Command | Purpose |
 | --- | --- |
-| `npm run dev` | Run the TypeScript entry point directly with `tsx`. |
-| `npm run test` | Run the test suite once with Node's test runner. |
-| `npm run test:watch` | Re-run tests while files change. |
-| `npm run audit` | Fail on high-severity production dependency advisories. |
+| `npm run dev` | Run the TypeScript entry point directly with Bun. |
+| `npm run test` | Run the test suite once with Bun's test runner. |
+| `npm run test:watch` | Re-run tests while files change (`bun test --watch`). |
+| `npm run audit` | Fail on high-severity dependency advisories. |
 | `npm run typecheck` | Type-check both `src` and `tests` without emitting files. |
 | `npm run lint` | Run Biome's correctness checks. |
 | `npm run format` | Format supported project files in place. |
@@ -53,17 +51,17 @@ npm run reset:all -- --yes
 
 ## Structure
 
-- `src/index.tsx` owns process signals, terminal restoration, and Ink mounting.
+- `src/index.tsx` owns process signals and provider cleanup while the OpenTUI renderer owns the alternate screen, mouse reporting, and terminal restoration.
 - `src/app` owns routes and composes the application's services and feature screens.
 - `src/domain` contains provider, material, preference, and study-session types. It has no React or filesystem code.
 - `src/features` groups home, setup, modal management, and study-session code by product feature.
 - `src/infrastructure` contains material I/O and JSON persistence.
-- `src/shared` contains reusable Ink controls, terminal hooks, theme values, text helpers, and package metadata.
+- `src/shared` contains reusable UI controls, terminal hooks, theme values, text helpers, and package metadata.
 - `src/providers` contains the single `StudyProvider` contract, one adapter per backend, provider metadata, and the factory map in `index.ts`. `prompt` resolves once with the final response text; there is no streaming.
 - `src/modals` contains modal state machines and the typed static registry. Manifests describe shortcuts and screen scope.
 - `src/commands` contains slash commands and their typed context.
 - `src/prompts` contains plain study-mode system prompts. Do not add schemas or runtime code there.
-- `tests` contains Node test-runner suites written in TypeScript.
+- `tests` contains node:test suites (run by Bun) written in TypeScript, including OpenTUI frame snapshots.
 - `scripts` contains cross-platform maintenance and package checks.
 
 Domain modules import no UI or infrastructure code. Infrastructure imports domain contracts, not feature components. Feature code receives side-effecting services through the app layer or narrow compatibility functions. Shared code cannot import features.

@@ -19,7 +19,7 @@
 
 OpenStudy is an AI-powered study assistant that runs in your terminal. It is built as an OpenCode-inspired TUI for asking study questions, selecting a subject, choosing a model, adjusting reasoning effort, attaching study material, and working in a preferred study language without leaving the command line.
 
-The project is currently focused on a local-first CLI experience using React, Ink, TypeScript, and the Codex SDK.
+The project is currently focused on a local-first CLI experience using React, OpenTUI, TypeScript, and the Codex app-server protocol.
 
 ## Purpose
 
@@ -35,7 +35,7 @@ Current goals:
 
 ## Features
 
-- Terminal UI built with Ink and React.
+- Terminal UI built with OpenTUI (Zig-native renderer) and React.
 - First-launch setup flow.
 - Codex and OpenCode provider support.
 - Subject selector with `tab`.
@@ -48,7 +48,7 @@ Current goals:
 
 ## Requirements
 
-- Node.js 22 or newer (required by Ink 7).
+- Bun 1.3 or newer (required by the OpenTUI renderer).
 - npm 10 or newer.
 - A terminal large enough for the TUI. The current minimum is `73x23`.
 - Codex login/configuration available locally, if you want to use the Codex provider.
@@ -65,7 +65,7 @@ cd openstudy
 Install dependencies:
 
 ```bash
-npm ci
+bun install --frozen-lockfile
 ```
 
 Run the app in development mode:
@@ -133,13 +133,13 @@ Important files:
 
 ## Development scripts
 
-- `npm run dev`: run the TypeScript source with `tsx`.
+- `npm run dev`: run the TypeScript source with Bun.
 - `npm run typecheck`: type-check source and tests without emitting files.
 - `npm run lint`: run Biome's linter.
 - `npm run format`: format supported project files.
 - `npm test`: run the test suite once.
 - `npm run test:watch`: re-run tests as files change.
-- `npm run audit`: check production dependencies for high-severity advisories.
+- `npm run audit`: check dependencies for high-severity advisories.
 - `npm run build`: clean and compile TypeScript into `dist`.
 - `npm run check`: run the complete local and CI quality gate.
 - `npm start`: run `dist/index.js`.

@@ -1,19 +1,18 @@
 import React from 'react';
-import { Box, Text, useInput } from 'ink';
-import { isTerminalMouseReport } from '../../utils/input.js';
+import { TextAttributes } from '@opentui/core';
+import { useAppKeys, useAppPaste } from '../../shared/terminal/keymap.js';
+import { SETUP_THEME } from './theme.js';
 
 interface ApiKeyInputProps {
   providerLabel: string;
   onSubmit: (apiKey: string) => void;
 }
 
-export const ApiKeyInput: React.FC<ApiKeyInputProps> = ({ providerLabel, onSubmit }) => {
+export const ApiKeyInput = ({ providerLabel, onSubmit }: ApiKeyInputProps) => {
   const [value, setValue] = React.useState('');
   const [error, setError] = React.useState('');
 
-  useInput((input, key) => {
-    if (isTerminalMouseReport(input)) return;
-
+  useAppKeys(({ input, key }) => {
     if (key.return) {
       if (value.trim().length === 0) {
         setError('API key cannot be empty.');
@@ -36,19 +35,39 @@ export const ApiKeyInput: React.FC<ApiKeyInputProps> = ({ providerLabel, onSubmi
     setError('');
   });
 
+  useAppPaste(({ input }) => {
+    setValue(current => current + input);
+    setError('');
+  });
+
   const masked = '●'.repeat(value.length);
 
   return (
-    <Box flexDirection="column" gap={1}>
-      <Text bold color="white">
-        Enter your {providerLabel} API key:
-      </Text>
+    <box style={{ flexDirection: 'column', gap: 1 }}>
+      <text fg={SETUP_THEME.text} attributes={TextAttributes.BOLD}>
+        {`Enter your ${providerLabel} API key:`}
+      </text>
 
-      <Box borderStyle="round" borderColor={error ? 'red' : 'gray'} paddingX={1}>
-        <Text color={value.length > 0 ? 'white' : 'gray'}>{value.length > 0 ? masked : 'Type your key…'}</Text>
-      </Box>
+      <box
+        style={{
+          borderStyle: 'rounded',
+          borderColor: error ? SETUP_THEME.danger : SETUP_THEME.muted,
+          paddingLeft: 1,
+          paddingRight: 1,
+        }}
+      >
+        <text fg={value.length > 0 ? SETUP_THEME.text : SETUP_THEME.muted}>
+          {value.length > 0 ? masked : 'Type your key…'}
+        </text>
+      </box>
 
-      {error ? <Text color="red">{error}</Text> : <Text dimColor>Input is hidden enter to confirm</Text>}
-    </Box>
+      {error ? (
+        <text fg={SETUP_THEME.danger}>{error}</text>
+      ) : (
+        <text fg={SETUP_THEME.muted} attributes={TextAttributes.DIM}>
+          Input is hidden enter to confirm
+        </text>
+      )}
+    </box>
   );
 };

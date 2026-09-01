@@ -1,4 +1,4 @@
-import { Box, Text } from 'ink';
+import { TextAttributes } from '@opentui/core';
 import { subjects } from '../options/index.js';
 import { focusTextColor } from '../utils/colors.js';
 import { createHandleInput, isBackspace, isCancel, isPlainTextInput, isSubmit } from './input.js';
@@ -42,44 +42,54 @@ export function render({ modal, context }: ModalRenderProps<SubjectsModalState>)
 
   return (
     <>
-      <Box justifyContent="space-between" marginBottom={1}>
-        <Text color={THEME.text} bold>
+      <box style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 1 }}>
+        <text fg={THEME.text} attributes={TextAttributes.BOLD}>
           Select Subject
-        </Text>
-        <Text color={THEME.textMuted}>esc</Text>
-      </Box>
-      <Box marginBottom={1}>
-        <Text color={THEME.textMuted}>Search </Text>
-        <Text color={THEME.text}>{state.filter}</Text>
-        <Text color={subjectColor}>█</Text>
-      </Box>
-      <Box flexDirection="column" marginBottom={1}>
+        </text>
+        <text fg={THEME.textMuted}>esc</text>
+      </box>
+      <box style={{ marginBottom: 1 }}>
+        <text>
+          <span fg={THEME.textMuted}>Search </span>
+          <span fg={THEME.text}>{state.filter}</span>
+          <span fg={subjectColor}>█</span>
+        </text>
+      </box>
+      <box style={{ flexDirection: 'column', marginBottom: 1 }}>
         {filteredSubjects.length === 0 ? (
-          <Text color={THEME.textMuted}>No results found</Text>
+          <text fg={THEME.textMuted}>No results found</text>
         ) : (
           visibleSubjects.map((subject, index) => {
             const subjectIndex = subjectWindowStart + index;
             const isSelected = state.selected === subjectIndex;
 
             return (
-              <Box key={subject.name} backgroundColor={isSelected ? subjectColor : undefined}>
-                <Text color={focusTextColor(subject.color, subjectColor, isSelected)} bold={isSelected}>
-                  ●{' '}
-                </Text>
-                <Text color={isSelected ? THEME.onAccent : THEME.text} bold={isSelected}>
-                  {subject.name}
-                </Text>
-              </Box>
+              <box key={subject.name} style={{ backgroundColor: isSelected ? subjectColor : undefined }}>
+                <text>
+                  <span
+                    fg={focusTextColor(subject.color, subjectColor, isSelected)}
+                    attributes={isSelected ? TextAttributes.BOLD : TextAttributes.NONE}
+                  >
+                    {'● '}
+                  </span>
+                  <span
+                    fg={isSelected ? THEME.onAccent : THEME.text}
+                    attributes={isSelected ? TextAttributes.BOLD : TextAttributes.NONE}
+                  >
+                    {subject.name}
+                  </span>
+                </text>
+              </box>
             );
           })
         )}
-      </Box>
-      <Box justifyContent="space-between">
-        <Text color={THEME.textMuted}>
-          ↑↓ move {subjectWindowStart + 1}-{subjectWindowStart + visibleSubjects.length}/{filteredSubjects.length}
-        </Text>
-        <Text color={THEME.textMuted}>enter select</Text>
-      </Box>
+      </box>
+      <box style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
+        <text fg={THEME.textMuted}>
+          {`↑↓ move ${subjectWindowStart + 1}-${subjectWindowStart + visibleSubjects.length}/${filteredSubjects.length}`}
+        </text>
+        <text fg={THEME.textMuted}>enter select</text>
+      </box>
     </>
   );
 }

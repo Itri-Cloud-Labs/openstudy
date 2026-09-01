@@ -1,11 +1,12 @@
 import React from 'react';
-import { Box, Text, useInput } from 'ink';
+import { TextAttributes } from '@opentui/core';
 import type { CommandContext, CommandModule } from '../../commands/index.js';
 import type { ModalTrigger } from '../../modals/index.js';
 import { useBlinkCursor } from '../hooks/useBlinkCursor.js';
 import { truncate } from '../text.js';
-import { isTerminalMouseReport } from '../../utils/input.js';
+import { useAppKeys, useAppPaste } from '../terminal/keymap.js';
 import { getCommandSuggestions, wrapInput } from './prompt-model.js';
+import type { AppKey } from '../terminal/keymap.js';
 import { THEME } from '../theme.js';
 
 const ACCENT_WIDTH = 1;
@@ -13,6 +14,22 @@ const INPUT_PADDING_X = 2;
 const MIN_INPUT_LINES = 1;
 const MAX_VISIBLE_INPUT_LINES = 10;
 const MAX_MENU_ITEMS = 10;
+const MENU_BORDER_ROWS = 2;
+
+// Side-less single border: only the left/right vertical rails are drawn.
+const RAIL_BORDER = {
+  topLeft: ' ',
+  topRight: ' ',
+  bottomLeft: ' ',
+  bottomRight: ' ',
+  horizontal: ' ',
+  vertical: '│',
+  topT: ' ',
+  bottomT: ' ',
+  leftT: ' ',
+  rightT: ' ',
+  cross: ' ',
+};
 
 interface PromptInputProps {
   onSubmit: (v: string) => void;
@@ -33,7 +50,7 @@ interface PromptInputProps {
   onMenuVisibleChange?: (visible: boolean) => void;
 }
 
-export const PromptInput: React.FC<PromptInputProps> = ({
+export const PromptInput = ({
   onSubmit,
   commands,
   commandContext,
@@ -50,7 +67,7 @@ export const PromptInput: React.FC<PromptInputProps> = ({
   studyLanguage = 'Study Language',
   showContextRow = true,
   onMenuVisibleChange,
-}) => {
+}: PromptInputProps) => {
   const [value, setValue] = React.useState('');
   const [selectedIndex, setSelectedIndex] = React.useState(0);
   const cursorVisible = useBlinkCursor();
@@ -74,7 +91,7 @@ export const PromptInput: React.FC<PromptInputProps> = ({
   }, [menuVisible, onMenuVisibleChange]);
   const menuItems = menuVisible ? suggestions : [];
   const menuRowCount = Math.max(1, menuItems.length);
-  const menuTop = -menuRowCount;
+  const menuTop = -(menuRowCount + MENU_BORDER_ROWS);
   const menuInnerWidth = Math.max(1, width - 4);
   const commandWidth = Math.max(0, ...commands.map(command => command.config.name.length + 1)) + 2;
 
@@ -107,7 +124,7 @@ export const PromptInput: React.FC<PromptInputProps> = ({
   );
 
   const matchingModalTrigger = React.useCallback(
-    (input: string, key: Parameters<Parameters<typeof useInput>[0]>[1]) => {
+    (input: string, key: AppKey) => {
       return modalTriggers.find(trigger => {
         if (trigger.tab) return key.tab;
         if (trigger.ctrl) return key.ctrl && input === trigger.input;
@@ -117,10 +134,8 @@ export const PromptInput: React.FC<PromptInputProps> = ({
     [modalTriggers],
   );
 
-  useInput(
-    (input, key) => {
-      if (isTerminalMouseReport(input)) return;
-
+  useAppKeys(
+    ({ input, key }) => {
       if (menuVisible && menuItems.length > 0 && (key.upArrow || (key.ctrl && input === 'p'))) {
         setSelectedIndex(current => (current - 1 + menuItems.length) % menuItems.length);
         return;
@@ -185,10 +200,12 @@ export const PromptInput: React.FC<PromptInputProps> = ({
       )
         return;
       if (key.ctrl || key.meta || key.escape || key.tab) return;
-      setValue(current => current + input);
+      if (input) setValue(current => current + input);
     },
     { isActive: inputActive },
   );
+
+  useAppPaste(({ input }) => setValue(current => current + input), { isActive: inputActive });
 
   const isPlaceholder = value.length === 0;
   const contentWidth = Math.max(1, width - ACCENT_WIDTH - INPUT_PADDING_X * 2);
@@ -210,25 +227,27 @@ export const PromptInput: React.FC<PromptInputProps> = ({
   const placeholderCursor = cursorVisible ? cursor : (placeholder[0] ?? ' ');
 
   return (
-    <Box flexDirection="column" width={width}>
+    <box style={{ flexDirection: 'column', width }}>
       {menuVisible && (
-        <Box
-          position="absolute"
-          top={menuTop}
-          left={0}
-          width={width}
-          flexDirection="column"
-          borderStyle="single"
-          borderTop={false}
-          borderBottom={false}
-          borderColor={THEME.rule}
-          backgroundColor={THEME.backgroundPanel}
-          overflow="hidden"
+        <box
+          style={{
+            position: 'absolute',
+            top: menuTop,
+            left: 0,
+            width,
+            flexDirection: 'column',
+            borderStyle: 'single',
+            borderColor: THEME.rule,
+            customBorderChars: RAIL_BORDER,
+            backgroundColor: THEME.backgroundPanel,
+            overflow: 'hidden',
+            zIndex: 10,
+          }}
         >
           {menuItems.length === 0 ? (
-            <Box paddingX={1} width="100%">
-              <Text color={THEME.textMuted}>No matching commands</Text>
-            </Box>
+            <box style={{ paddingLeft: 1, paddingRight: 1, width: '100%' }}>
+              <text fg={THEME.textMuted}>No matching commands</text>
+            </box>
           ) : (
             menuItems.map((suggestion, index) => {
               const isSelected = index === selectedIndex;
@@ -236,66 +255,85 @@ export const PromptInput: React.FC<PromptInputProps> = ({
               const description = truncate(suggestion.config.description, remaining, '…');
 
               return (
-                <Box
+                <box
                   key={suggestion.config.name}
-                  paddingX={1}
-                  width="100%"
-                  backgroundColor={isSelected ? subjectColor : undefined}
+                  style={{
+                    paddingLeft: 1,
+                    paddingRight: 1,
+                    width: '100%',
+                    backgroundColor: isSelected ? subjectColor : undefined,
+                  }}
                 >
-                  <Text color={isSelected ? THEME.onAccent : THEME.text} bold={isSelected}>
-                    {`/${suggestion.config.name}`.padEnd(commandWidth)}
-                  </Text>
-                  <Text color={isSelected ? THEME.onAccent : THEME.textMuted}>{description}</Text>
-                </Box>
+                  <text>
+                    <span
+                      fg={isSelected ? THEME.onAccent : THEME.text}
+                      attributes={isSelected ? TextAttributes.BOLD : TextAttributes.NONE}
+                    >
+                      {`/${suggestion.config.name}`.padEnd(commandWidth)}
+                    </span>
+                    <span fg={isSelected ? THEME.onAccent : THEME.textMuted}>{description}</span>
+                  </text>
+                </box>
               );
             })
           )}
-        </Box>
+        </box>
       )}
 
-      <Box flexDirection="row" width={width} backgroundColor={THEME.backgroundRaised}>
-        <Box width={ACCENT_WIDTH} backgroundColor={subjectColor} />
+      <box style={{ flexDirection: 'row', width, backgroundColor: THEME.backgroundRaised }}>
+        <box style={{ width: ACCENT_WIDTH, height: '100%', backgroundColor: subjectColor }} />
 
-        <Box flexDirection="column" flexGrow={1} paddingX={INPUT_PADDING_X} paddingY={1}>
-          <Box marginBottom={1} minHeight={MIN_INPUT_LINES} flexDirection="column">
+        <box
+          style={{
+            flexDirection: 'column',
+            flexGrow: 1,
+            paddingLeft: INPUT_PADDING_X,
+            paddingRight: INPUT_PADDING_X,
+            paddingTop: 1,
+            paddingBottom: 1,
+          }}
+        >
+          <box style={{ marginBottom: 1, minHeight: MIN_INPUT_LINES, flexDirection: 'column' }}>
             {isPlaceholder ? (
-              <Text>
-                <Text color={cursorVisible ? THEME.text : THEME.textMuted}>{placeholderCursor}</Text>
-                <Text color={THEME.textMuted}>{placeholder.slice(1)}</Text>
-              </Text>
+              <text>
+                <span fg={cursorVisible ? THEME.text : THEME.textMuted}>{placeholderCursor}</span>
+                <span fg={THEME.textMuted}>{placeholder.slice(1)}</span>
+              </text>
             ) : (
               visibleLines.map((line, index) => {
                 const isLastLine = index === visibleLines.length - 1;
 
                 return (
-                  <Text key={`${index}:${line}`}>
-                    <Text color={THEME.text}>{line}</Text>
-                    {isLastLine && <Text color={THEME.text}>{cursor}</Text>}
-                  </Text>
+                  <text key={`${index}:${line}`}>
+                    <span fg={THEME.text}>{line}</span>
+                    {isLastLine && <span fg={THEME.text}>{cursor}</span>}
+                  </text>
                 );
               })
             )}
-          </Box>
+          </box>
 
           {showContextRow && (
-            <Box flexDirection="row">
-              <Text color={subjectColor} bold>
-                {subject}
-              </Text>
-              <Text color={THEME.rule}> · </Text>
-              <Text color={THEME.textMuted}>{model}</Text>
-              <Text color={THEME.rule}> · </Text>
-              <Text color={THEME.primary} bold>
-                {reasoningEffort}
-              </Text>
-              <Text color={THEME.rule}> · </Text>
-              <Text color={THEME.textMuted}>{material}</Text>
-              <Text color={THEME.rule}> · </Text>
-              <Text color={THEME.textMuted}>{studyLanguage}</Text>
-            </Box>
+            <box style={{ flexDirection: 'row' }}>
+              <text>
+                <span fg={subjectColor} attributes={TextAttributes.BOLD}>
+                  {subject}
+                </span>
+                <span fg={THEME.rule}> · </span>
+                <span fg={THEME.textMuted}>{model}</span>
+                <span fg={THEME.rule}> · </span>
+                <span fg={THEME.primary} attributes={TextAttributes.BOLD}>
+                  {reasoningEffort}
+                </span>
+                <span fg={THEME.rule}> · </span>
+                <span fg={THEME.textMuted}>{material}</span>
+                <span fg={THEME.rule}> · </span>
+                <span fg={THEME.textMuted}>{studyLanguage}</span>
+              </text>
+            </box>
           )}
-        </Box>
-      </Box>
-    </Box>
+        </box>
+      </box>
+    </box>
   );
 };

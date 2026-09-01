@@ -1,4 +1,4 @@
-import { Box, Text } from 'ink';
+import { TextAttributes } from '@opentui/core';
 import type { StudySession } from '../domain/study.js';
 import { focusTextColor } from '../utils/colors.js';
 import { getAllSessions } from '../utils/sessions.js';
@@ -40,18 +40,18 @@ export function render({ modal, context }: ModalRenderProps<SessionsModalState>)
 
   return (
     <>
-      <Box justifyContent="space-between" marginBottom={1}>
-        <Text color={THEME.text} bold>
+      <box style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 1 }}>
+        <text fg={THEME.text} attributes={TextAttributes.BOLD}>
           Saved Sessions
-        </Text>
-        <Text color={THEME.textMuted}>esc</Text>
-      </Box>
-      <Box marginBottom={1}>
-        <Text color={THEME.textMuted}>Choose a session to resume.</Text>
-      </Box>
-      <Box flexDirection="column" marginBottom={1}>
+        </text>
+        <text fg={THEME.textMuted}>esc</text>
+      </box>
+      <box style={{ marginBottom: 1 }}>
+        <text fg={THEME.textMuted}>Choose a session to resume.</text>
+      </box>
+      <box style={{ flexDirection: 'column', marginBottom: 1 }}>
         {sessions.length === 0 ? (
-          <Text color={THEME.textMuted}>No saved sessions yet</Text>
+          <text fg={THEME.textMuted}>No saved sessions yet</text>
         ) : (
           visibleSessions.map((session, index) => {
             const sessionIndex = windowStart + index;
@@ -59,36 +59,42 @@ export function render({ modal, context }: ModalRenderProps<SessionsModalState>)
             const isCurrent = session.id === context.activeSessionId;
 
             return (
-              <Box
+              <box
                 key={session.id}
-                backgroundColor={isSelected ? subjectColor : undefined}
-                justifyContent="space-between"
+                style={{
+                  flexDirection: 'row',
+                  backgroundColor: isSelected ? subjectColor : undefined,
+                  justifyContent: 'space-between',
+                }}
               >
-                <Text color={isSelected ? THEME.onAccent : THEME.text} bold={isSelected}>
+                <text
+                  fg={isSelected ? THEME.onAccent : THEME.text}
+                  attributes={isSelected ? TextAttributes.BOLD : TextAttributes.NONE}
+                >
                   {truncate(getSessionTitle(session), 34)}
-                </Text>
-                <Text color={focusTextColor(isCurrent ? THEME.success : THEME.textMuted, subjectColor, isSelected)}>
+                </text>
+                <text fg={focusTextColor(isCurrent ? THEME.success : THEME.textMuted, subjectColor, isSelected)}>
                   {isCurrent ? 'current' : getSessionMeta(session)}
-                </Text>
-              </Box>
+                </text>
+              </box>
             );
           })
         )}
-      </Box>
+      </box>
       {state.error && (
-        <Box marginBottom={1}>
-          <Text color={THEME.danger}>{truncateError(state.error)}</Text>
-        </Box>
+        <box style={{ marginBottom: 1 }}>
+          <text fg={THEME.danger}>{truncateError(state.error)}</text>
+        </box>
       )}
-      <Box justifyContent="space-between">
-        <Text color={THEME.textMuted}>
-          up/down{' '}
+      <box style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
+        <text fg={THEME.textMuted}>
+          {'up/down '}
           {sessions.length === 0
             ? '0-0/0'
             : `${windowStart + 1}-${windowStart + visibleSessions.length}/${sessions.length}`}
-        </Text>
-        <Text color={THEME.textMuted}>enter open</Text>
-      </Box>
+        </text>
+        <text fg={THEME.textMuted}>enter open</text>
+      </box>
     </>
   );
 }

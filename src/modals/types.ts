@@ -1,6 +1,6 @@
 import type React from 'react';
-import type { useInput } from 'ink';
 import type { SubjectOption } from '../options/index.js';
+import type { AppKey } from '../shared/terminal/keymap.js';
 import type { ActiveProviderConfig, Provider } from '../domain/provider.js';
 import type { AppPreferences, StudySession } from '../domain/study.js';
 
@@ -28,7 +28,7 @@ export type ModalScreen = 'home' | 'session';
 /** Base constraint every modal state must satisfy; concrete states narrow `id`. */
 export type ModalState = { id: ModalId };
 
-export type ModalInputKey = Parameters<Parameters<typeof useInput>[0]>[1];
+export type ModalInputKey = AppKey;
 
 export interface ModalTrigger {
   id: ModalId;

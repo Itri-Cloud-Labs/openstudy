@@ -1,5 +1,5 @@
 import React from 'react';
-import { Box, Text, useInput } from 'ink';
+import { TextAttributes } from '@opentui/core';
 import type { CommandContext, CommandModule } from '../../commands/index.js';
 import type { SessionPresentation } from '../session-presentation.js';
 import { SummaryMode, type ModeProps, type SummaryModeProps } from './modes/summary/SummaryMode.js';
@@ -7,16 +7,19 @@ import { ModalHost, type ActiveModal, type ModalRenderContext, type ModalTrigger
 import { useSummary } from './modes/summary/useSummary.js';
 import { THEME } from '../../shared/theme.js';
 import { truncate } from '../../shared/text.js';
-import { isTerminalMouseReport } from '../../utils/input.js';
+import { useAppKeys } from '../../shared/terminal/keymap.js';
 import { PromptInput } from '../../shared/ui/PromptInput.js';
 import { APP_VERSION } from '../../shared/metadata.js';
 
 const SIDEBAR_WIDTH = 42;
 const WIDE_TERMINAL_BREAKPOINT = 120;
 
+// Inferred element return type keeps the components valid under OpenTUI's JSX namespace.
+type ModeComponent = (props: SummaryModeProps) => ReturnType<typeof SummaryMode>;
+
 interface SessionModeDefinition {
   label: string;
-  Component: React.ComponentType<SummaryModeProps>;
+  Component: ModeComponent;
 }
 
 const SESSION_MODES: readonly SessionModeDefinition[] = [
@@ -42,7 +45,7 @@ interface SessionScreenProps {
   onModalTrigger: (trigger: ModalTrigger) => void;
 }
 
-export const SessionScreen: React.FC<SessionScreenProps> = ({
+export const SessionScreen = ({
   termWidth,
   termHeight,
   sessionId,
@@ -55,7 +58,7 @@ export const SessionScreen: React.FC<SessionScreenProps> = ({
   modalContext,
   modalTriggers,
   onModalTrigger,
-}) => {
+}: SessionScreenProps) => {
   const [activeModeIndex, setActiveModeIndex] = React.useState(0);
   const [commandMenuActive, setCommandMenuActive] = React.useState(false);
   const sidebarVisible = termWidth > WIDE_TERMINAL_BREAKPOINT;
@@ -79,10 +82,8 @@ export const SessionScreen: React.FC<SessionScreenProps> = ({
     });
   }, [commandContext]);
 
-  useInput(
-    (input, key) => {
-      if (isTerminalMouseReport(input)) return;
-
+  useAppKeys(
+    ({ input, key }) => {
       if (key.ctrl && input === 'l') {
         setActiveModeIndex(current => (current + 1) % SESSION_MODES.length);
       }
@@ -91,10 +92,10 @@ export const SessionScreen: React.FC<SessionScreenProps> = ({
   );
 
   return (
-    <Box flexDirection="row" width={termWidth} height={termHeight} backgroundColor={THEME.background}>
-      <Box flexGrow={1} flexDirection="column" paddingLeft={2} paddingRight={2} paddingBottom={1}>
-        <Box flexGrow={1} flexDirection="column" width={contentWidth}>
-          <Box height={1} flexShrink={0} />
+    <box style={{ flexDirection: 'row', width: termWidth, height: termHeight, backgroundColor: THEME.background }}>
+      <box style={{ flexGrow: 1, flexDirection: 'column', paddingLeft: 2, paddingRight: 2, paddingBottom: 1 }}>
+        <box style={{ flexGrow: 1, flexDirection: 'column', width: contentWidth }}>
+          <box style={{ height: 1, flexShrink: 0 }} />
           <ActiveMode
             contentWidth={contentWidth}
             contentHeight={contentHeight}
@@ -102,10 +103,10 @@ export const SessionScreen: React.FC<SessionScreenProps> = ({
             inputActive={inputActive}
             commandMenuActive={commandMenuActive}
           />
-          <Box flexGrow={1} />
-        </Box>
+          <box style={{ flexGrow: 1 }} />
+        </box>
 
-        <Box flexShrink={0} flexDirection="column" width={contentWidth}>
+        <box style={{ flexShrink: 0, flexDirection: 'column', width: contentWidth }}>
           <PromptInput
             onSubmit={handleSessionSubmit}
             commands={commands}
@@ -121,30 +122,32 @@ export const SessionScreen: React.FC<SessionScreenProps> = ({
             onMenuVisibleChange={setCommandMenuActive}
           />
 
-          <Box flexDirection="row" justifyContent="space-between">
-            <Text color={THEME.textMuted}> </Text>
-            <Text color={THEME.textMuted}>ctrl+c exit</Text>
-          </Box>
-        </Box>
-      </Box>
+          <box style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
+            <text fg={THEME.textMuted}> </text>
+            <text fg={THEME.textMuted}>ctrl+c exit</text>
+          </box>
+        </box>
+      </box>
 
       {sidebarVisible && (
-        <Box
-          width={SIDEBAR_WIDTH}
-          height="100%"
-          flexDirection="column"
-          backgroundColor={THEME.backgroundPanel}
-          paddingTop={1}
-          paddingBottom={1}
-          paddingLeft={2}
-          paddingRight={2}
+        <box
+          style={{
+            width: SIDEBAR_WIDTH,
+            height: '100%',
+            flexDirection: 'column',
+            backgroundColor: THEME.backgroundPanel,
+            paddingTop: 1,
+            paddingBottom: 1,
+            paddingLeft: 2,
+            paddingRight: 2,
+          }}
         >
-          <Box flexGrow={1} flexDirection="column" paddingRight={1}>
+          <box style={{ flexGrow: 1, flexDirection: 'column', paddingRight: 1 }}>
             <SidebarSection title="Session">
-              <Text color={THEME.text} bold>
+              <text fg={THEME.text} attributes={TextAttributes.BOLD}>
                 {title}
-              </Text>
-              <Text color={THEME.textMuted}>Local study session</Text>
+              </text>
+              <text fg={THEME.textMuted}>Local study session</text>
             </SidebarSection>
 
             <SidebarSection title="Settings">
@@ -157,48 +160,57 @@ export const SessionScreen: React.FC<SessionScreenProps> = ({
             </SidebarSection>
 
             <SidebarSection title="Mode">
-              <Box flexDirection="column">
+              <box style={{ flexDirection: 'column' }}>
                 {SESSION_MODES.map((mode, index) => {
                   const active = index === activeModeIndex;
 
                   return (
-                    <Box
+                    <box
                       key={mode.label}
-                      backgroundColor={active ? presentation.subjectColor : undefined}
-                      paddingX={1}
-                      justifyContent="space-between"
+                      style={{
+                        flexDirection: 'row',
+                        backgroundColor: active ? presentation.subjectColor : undefined,
+                        paddingLeft: 1,
+                        paddingRight: 1,
+                        justifyContent: 'space-between',
+                      }}
                     >
-                      <Text color={active ? THEME.onAccent : THEME.textMuted} bold={active}>
+                      <text
+                        fg={active ? THEME.onAccent : THEME.textMuted}
+                        attributes={active ? TextAttributes.BOLD : TextAttributes.NONE}
+                      >
                         {mode.label}
-                      </Text>
+                      </text>
                       {active && (
-                        <Text color={THEME.onAccent} bold>
+                        <text fg={THEME.onAccent} attributes={TextAttributes.BOLD}>
                           active
-                        </Text>
+                        </text>
                       )}
-                    </Box>
+                    </box>
                   );
                 })}
-              </Box>
-              <Box marginTop={1}>
-                <Text color={THEME.textMuted}>ctrl+l next mode</Text>
-              </Box>
+              </box>
+              <box style={{ marginTop: 1 }}>
+                <text fg={THEME.textMuted}>ctrl+l next mode</text>
+              </box>
             </SidebarSection>
-          </Box>
+          </box>
 
-          <Box flexShrink={0} flexDirection="column" paddingTop={1}>
-            <Text color={THEME.textMuted}>
-              <Text color={THEME.success}>*</Text>
-              {' dir: '}
-              {presentation.cwd}
-            </Text>
-            <Text color={THEME.textMuted}>OpenStudy {APP_VERSION}</Text>
-          </Box>
-        </Box>
+          <box style={{ flexShrink: 0, flexDirection: 'column', paddingTop: 1 }}>
+            <text>
+              <span fg={THEME.textMuted}>
+                <span fg={THEME.success}>*</span>
+                {' dir: '}
+                {presentation.cwd}
+              </span>
+            </text>
+            <text fg={THEME.textMuted}>{`OpenStudy ${APP_VERSION}`}</text>
+          </box>
+        </box>
       )}
 
       {modal && <ModalHost modal={modal} termWidth={termWidth} termHeight={termHeight} context={modalContext} />}
-    </Box>
+    </box>
   );
 };
 
@@ -220,30 +232,28 @@ function AiTeacherMode(_props: ModeProps) {
 
 function ModePlaceholder({ name }: { name: string }) {
   return (
-    <Box marginTop={1}>
-      <Text color={THEME.textMuted}>{name}</Text>
-    </Box>
+    <box style={{ marginTop: 1 }}>
+      <text fg={THEME.textMuted}>{name}</text>
+    </box>
   );
 }
 
 function SidebarSection({ title, children }: { title: string; children: React.ReactNode }) {
   return (
-    <Box flexDirection="column" marginBottom={1}>
-      <Text color={THEME.primary} bold>
+    <box style={{ flexDirection: 'column', marginBottom: 1 }}>
+      <text fg={THEME.primary} attributes={TextAttributes.BOLD}>
         {title}
-      </Text>
-      <Box flexDirection="column" marginTop={1}>
-        {children}
-      </Box>
-    </Box>
+      </text>
+      <box style={{ flexDirection: 'column', marginTop: 1 }}>{children}</box>
+    </box>
   );
 }
 
 function SidebarRow({ label, value, valueColor = THEME.text }: { label: string; value: string; valueColor?: string }) {
   return (
-    <Box justifyContent="space-between">
-      <Text color={THEME.textMuted}>{label}</Text>
-      <Text color={valueColor}>{truncate(value, 22)}</Text>
-    </Box>
+    <box style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
+      <text fg={THEME.textMuted}>{label}</text>
+      <text fg={valueColor}>{truncate(value, 22)}</text>
+    </box>
   );
 }

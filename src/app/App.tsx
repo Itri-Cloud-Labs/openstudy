@@ -1,5 +1,5 @@
 import React from 'react';
-import { Box, Text, useInput } from 'ink';
+import { TextAttributes } from '@opentui/core';
 import { loadCommands, type CommandContext, type CommandModule } from '../commands/index.js';
 import type { ActiveProviderConfig, Provider } from '../domain/provider.js';
 import { materialRefToLegacy } from '../domain/material.js';
@@ -16,11 +16,10 @@ import { createProvider, PROVIDER_METADATA } from '../providers/index.js';
 import { useTerminalSize } from '../shared/hooks/useTerminalSize.js';
 import { formatMaterialLabel } from '../shared/text.js';
 import { THEME } from '../shared/theme.js';
-import { useTerminalSurface } from '../shared/terminal/useTerminalSurface.js';
+import { useAppKeys, useAppPaste } from '../shared/terminal/keymap.js';
 import { LoadingScreen } from '../shared/ui/LoadingScreen.js';
 import { loadAppPreferences, loadConfig, saveConfig, updatePreferences } from '../utils/config.js';
 import { activateSession as activateSavedSession, createSession } from '../utils/sessions.js';
-import { isTerminalMouseReport } from '../utils/input.js';
 
 const MIN_LOADING_MS = 350;
 const FIRST_LAUNCH_LOADING_MS = 4000;
@@ -107,7 +106,6 @@ interface StudyWorkspaceProps {
 }
 
 function StudyWorkspace({ route, commands, inputDisabled, onExit, onRouteChange }: StudyWorkspaceProps) {
-  useTerminalSurface();
   const terminal = useTerminalSize();
   const [preferences, setPreferences] = React.useState<AppPreferences>(() => loadAppPreferences());
   const [config, setConfig] = React.useState<ActiveProviderConfig | null>(() => loadConfig());
@@ -174,8 +172,11 @@ function StudyWorkspace({ route, commands, inputDisabled, onExit, onRouteChange 
     isProviderConfigured,
   });
 
-  useInput((input, key) => {
-    if (inputDisabled || isTerminalMouseReport(input)) return;
+  useAppKeys(({ input, key }) => {
+    if (inputDisabled) {
+      if (key.ctrl && input === 'c') onExit();
+      return;
+    }
 
     if (modalManager.modal) {
       const handled =
@@ -191,6 +192,16 @@ function StudyWorkspace({ route, commands, inputDisabled, onExit, onRouteChange 
     }
 
     if (key.ctrl && input === 'c') onExit();
+  });
+
+  useAppPaste(({ input, key }) => {
+    if (inputDisabled || !modalManager.modal) return;
+    modalManager.modal.module.handleInput?.({
+      input,
+      key,
+      modal: modalManager.modal.state,
+      context: modalManager.context,
+    });
   });
 
   const commandContext = React.useMemo<CommandContext>(
@@ -262,25 +273,30 @@ function StudyWorkspace({ route, commands, inputDisabled, onExit, onRouteChange 
 
 function TerminalTooSmall({ width, height }: { width: number; height: number }) {
   return (
-    <Box
-      width={width}
-      height={height}
-      flexDirection="column"
-      alignItems="center"
-      justifyContent="center"
-      backgroundColor={THEME.background}
+    <box
+      style={{
+        position: 'absolute',
+        top: 0,
+        left: 0,
+        width,
+        height,
+        flexDirection: 'column',
+        alignItems: 'center',
+        justifyContent: 'center',
+        backgroundColor: THEME.background,
+        zIndex: 50,
+      }}
     >
-      <Text color={THEME.primary} bold>
+      <text fg={THEME.primary} attributes={TextAttributes.BOLD}>
         Terminal too small
-      </Text>
-      <Text color={THEME.textFaint}>
-        {width}×{height}
-        {'  '}
-        <Text color={THEME.textMuted}>minimum </Text>
-        {MIN_WIDTH}×{MIN_HEIGHT}
-      </Text>
-      <Text color={THEME.textFaint}>Resize your terminal window to continue.</Text>
-    </Box>
+      </text>
+      <text>
+        <span fg={THEME.textFaint}>{`${width}×${height}  `}</span>
+        <span fg={THEME.textMuted}>minimum </span>
+        <span fg={THEME.textFaint}>{`${MIN_WIDTH}×${MIN_HEIGHT}`}</span>
+      </text>
+      <text fg={THEME.textFaint}>Resize your terminal window to continue.</text>
+    </box>
   );
 }
 
