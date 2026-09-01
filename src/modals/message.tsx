@@ -26,7 +26,7 @@ export function render({ modal, context }: ModalRenderProps<MessageModalState>) 
 
   return (
     <>
-      <box style={{ justifyContent: 'space-between', marginBottom: 1 }}>
+      <box style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 1 }}>
         <text fg={THEME.text} attributes={TextAttributes.BOLD}>
           {state.title}
         </text>
@@ -35,7 +35,7 @@ export function render({ modal, context }: ModalRenderProps<MessageModalState>) 
       <box style={{ marginBottom: 1 }}>
         <text fg={THEME.textMuted}>{state.message}</text>
       </box>
-      <box style={{ justifyContent: 'flex-end' }}>
+      <box style={{ flexDirection: 'row', justifyContent: 'flex-end' }}>
         <text fg={THEME.onAccent} bg={context.selectedSubject?.color ?? '#3b82f6'}>
           {' ok '}
         </text>

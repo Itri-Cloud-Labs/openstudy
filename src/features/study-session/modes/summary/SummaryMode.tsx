@@ -115,7 +115,7 @@ export function SummaryMode({
 
   return (
     <box style={{ flexDirection: 'column' }}>
-      <box style={{ marginTop: 1, marginBottom: 1, justifyContent: 'space-between' }}>
+      <box style={{ flexDirection: 'row', marginTop: 1, marginBottom: 1, justifyContent: 'space-between' }}>
         <text fg={THEME.text} attributes={TextAttributes.BOLD}>
           Summary
         </text>

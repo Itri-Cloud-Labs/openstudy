@@ -13,7 +13,7 @@ export function SubProvidersLayer({ modal, context }: ModalRenderProps<ModelsSub
 
   return (
     <>
-      <box style={{ justifyContent: 'space-between', marginBottom: 1 }}>
+      <box style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 1 }}>
         <text fg={THEME.text} attributes={TextAttributes.BOLD}>
           {getProviderLabel(modal.provider)}
         </text>
@@ -42,7 +42,7 @@ export function SubProvidersLayer({ modal, context }: ModalRenderProps<ModelsSub
           })
         )}
       </box>
-      <box style={{ justifyContent: 'space-between' }}>
+      <box style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
         <text fg={THEME.textMuted}>← back ↑↓ move</text>
         <text fg={THEME.textMuted}>enter continue</text>
       </box>

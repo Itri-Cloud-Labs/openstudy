@@ -40,7 +40,7 @@ export function render({ modal, context }: ModalRenderProps<SessionsModalState>)
 
   return (
     <>
-      <box style={{ justifyContent: 'space-between', marginBottom: 1 }}>
+      <box style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 1 }}>
         <text fg={THEME.text} attributes={TextAttributes.BOLD}>
           Saved Sessions
         </text>
@@ -62,6 +62,7 @@ export function render({ modal, context }: ModalRenderProps<SessionsModalState>)
               <box
                 key={session.id}
                 style={{
+                  flexDirection: 'row',
                   backgroundColor: isSelected ? subjectColor : undefined,
                   justifyContent: 'space-between',
                 }}
@@ -85,7 +86,7 @@ export function render({ modal, context }: ModalRenderProps<SessionsModalState>)
           <text fg={THEME.danger}>{truncateError(state.error)}</text>
         </box>
       )}
-      <box style={{ justifyContent: 'space-between' }}>
+      <box style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
         <text fg={THEME.textMuted}>
           {'up/down '}
           {sessions.length === 0

@@ -53,7 +53,7 @@ export function render({ modal, context }: ModalRenderProps<LanguageModalState>)
 
   return (
     <>
-      <box style={{ justifyContent: 'space-between', marginBottom: 1 }}>
+      <box style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 1 }}>
         <text fg={THEME.text} attributes={TextAttributes.BOLD}>
           Select Language
         </text>
@@ -79,6 +79,7 @@ export function render({ modal, context }: ModalRenderProps<LanguageModalState>)
               <box
                 key={language}
                 style={{
+                  flexDirection: 'row',
                   backgroundColor: isSelected ? subjectColor : undefined,
                   justifyContent: 'space-between',
                 }}
@@ -95,7 +96,7 @@ export function render({ modal, context }: ModalRenderProps<LanguageModalState>)
           })
         )}
       </box>
-      <box style={{ justifyContent: 'space-between' }}>
+      <box style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
         <text fg={THEME.textMuted}>
           {`↑↓ move ${windowStart + 1}-${windowStart + visibleLanguages.length}/${filteredLanguages.length}`}
         </text>

@@ -12,7 +12,7 @@ export function ProviderLayer({ modal, context }: ModalRenderProps<ModelsProvide
 
   return (
     <>
-      <box style={{ justifyContent: 'space-between', marginBottom: 1 }}>
+      <box style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 1 }}>
         <text fg={THEME.text} attributes={TextAttributes.BOLD}>
           Select Provider
         </text>
@@ -41,6 +41,7 @@ export function ProviderLayer({ modal, context }: ModalRenderProps<ModelsProvide
               <box
                 key={provider.id}
                 style={{
+                  flexDirection: 'row',
                   backgroundColor: isSelected ? subjectColor : undefined,
                   justifyContent: 'space-between',
                 }}
@@ -62,7 +63,7 @@ export function ProviderLayer({ modal, context }: ModalRenderProps<ModelsProvide
           })
         )}
       </box>
-      <box style={{ justifyContent: 'space-between' }}>
+      <box style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
         <text fg={modal.error ? THEME.danger : THEME.textMuted}>
           {modal.error ? truncateError(modal.error) : providers.length === 0 ? 'providers unavailable' : '↑↓ move'}
         </text>

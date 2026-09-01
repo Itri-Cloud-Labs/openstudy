@@ -55,7 +55,7 @@ export function render({ modal, context }: ModalRenderProps<ReasoningModalState>
   if ('error' in state) {
     return (
       <>
-        <box style={{ justifyContent: 'space-between', marginBottom: 1 }}>
+        <box style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 1 }}>
           <text fg={THEME.text} attributes={TextAttributes.BOLD}>
             Select Reasoning
           </text>
@@ -64,7 +64,7 @@ export function render({ modal, context }: ModalRenderProps<ReasoningModalState>
         <box style={{ marginBottom: 1 }}>
           <text fg={THEME.danger}>{state.error}</text>
         </box>
-        <box style={{ justifyContent: 'flex-end' }}>
+        <box style={{ flexDirection: 'row', justifyContent: 'flex-end' }}>
           <text fg={THEME.textMuted}>enter close</text>
         </box>
       </>
@@ -78,7 +78,7 @@ export function render({ modal, context }: ModalRenderProps<ReasoningModalState>
 
   return (
     <>
-      <box style={{ justifyContent: 'space-between', marginBottom: 1 }}>
+      <box style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 1 }}>
         <text fg={THEME.text} attributes={TextAttributes.BOLD}>
           {state.providerLabel}/{state.model}
         </text>
@@ -97,6 +97,7 @@ export function render({ modal, context }: ModalRenderProps<ReasoningModalState>
             <box
               key={level.id}
               style={{
+                flexDirection: 'row',
                 backgroundColor: isSelected ? subjectColor : undefined,
                 justifyContent: 'space-between',
               }}
@@ -112,7 +113,7 @@ export function render({ modal, context }: ModalRenderProps<ReasoningModalState>
           );
         })}
       </box>
-      <box style={{ justifyContent: 'space-between' }}>
+      <box style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
         <text fg={THEME.textMuted}>
           {`↑↓ move ${windowStart + 1}-${windowStart + visibleLevels.length}/${state.levels.length}`}
         </text>

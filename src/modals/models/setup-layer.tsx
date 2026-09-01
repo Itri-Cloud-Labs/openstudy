@@ -6,7 +6,7 @@ import { getProviderLabel, type ModelsSetupState } from './state.js';
 export function SetupLayer({ modal, context }: ModalRenderProps<ModelsSetupState>) {
   return (
     <>
-      <box style={{ justifyContent: 'space-between', marginBottom: 1 }}>
+      <box style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 1 }}>
         <text fg={THEME.text} attributes={TextAttributes.BOLD}>
           {`Set Up ${getProviderLabel(modal.provider)}`}
         </text>
@@ -23,7 +23,7 @@ export function SetupLayer({ modal, context }: ModalRenderProps<ModelsSetupState
           <span fg={context.selectedSubject?.color ?? '#3b82f6'}>█</span>
         </text>
       </box>
-      <box style={{ justifyContent: 'space-between' }}>
+      <box style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
         <text fg={modal.error ? THEME.danger : THEME.textMuted}>{modal.error ?? '← providers'}</text>
         <text fg={THEME.textMuted}>enter save</text>
       </box>

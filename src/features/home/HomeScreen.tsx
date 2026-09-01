@@ -43,11 +43,11 @@ export function HomeScreen({ width, height, promptWidth, presentation, input, ov
     <box style={{ flexDirection: 'column', width, height, backgroundColor: THEME.background }}>
       <box style={{ height: topPadding, flexShrink: 0 }} />
 
-      <box style={{ justifyContent: 'center', marginBottom: 2 }}>
+      <box style={{ flexDirection: 'row', justifyContent: 'center', marginBottom: 2 }}>
         <Logo />
       </box>
 
-      <box style={{ justifyContent: 'center' }}>
+      <box style={{ flexDirection: 'row', justifyContent: 'center' }}>
         <PromptInput
           onSubmit={input.onSubmit}
           commands={input.commands}
@@ -66,8 +66,8 @@ export function HomeScreen({ width, height, promptWidth, presentation, input, ov
         />
       </box>
 
-      <box style={{ justifyContent: 'center', marginTop: 1 }}>
-        <box style={{ width: promptWidth, justifyContent: 'flex-end' }}>
+      <box style={{ flexDirection: 'row', justifyContent: 'center', marginTop: 1 }}>
+        <box style={{ width: promptWidth, flexDirection: 'row', justifyContent: 'flex-end' }}>
           <text>
             <span fg={THEME.text}>tab</span>
             <span fg={THEME.textFaint}> subject </span>
@@ -83,7 +83,7 @@ export function HomeScreen({ width, height, promptWidth, presentation, input, ov
         </box>
       </box>
 
-      <box style={{ justifyContent: 'center', marginTop: 2 }}>
+      <box style={{ flexDirection: 'row', justifyContent: 'center', marginTop: 2 }}>
         <box style={{ width: promptWidth, flexDirection: 'row' }}>
           <text>
             <span fg={THEME.primary}>{'● '}</span>

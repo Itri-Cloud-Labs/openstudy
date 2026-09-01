@@ -42,7 +42,7 @@ export function render({ modal, context }: ModalRenderProps<SubjectsModalState>)
 
   return (
     <>
-      <box style={{ justifyContent: 'space-between', marginBottom: 1 }}>
+      <box style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 1 }}>
         <text fg={THEME.text} attributes={TextAttributes.BOLD}>
           Select Subject
         </text>
@@ -84,7 +84,7 @@ export function render({ modal, context }: ModalRenderProps<SubjectsModalState>)
           })
         )}
       </box>
-      <box style={{ justifyContent: 'space-between' }}>
+      <box style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
         <text fg={THEME.textMuted}>
           {`↑↓ move ${subjectWindowStart + 1}-${subjectWindowStart + visibleSubjects.length}/${filteredSubjects.length}`}
         </text>

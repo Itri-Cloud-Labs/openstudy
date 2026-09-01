@@ -45,7 +45,7 @@ function SourceLayer({ modal, context }: ModalRenderProps<Extract<FilePickerModa
 
   return (
     <>
-      <box style={{ justifyContent: 'space-between', marginBottom: 1 }}>
+      <box style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 1 }}>
         <text fg={THEME.text} attributes={TextAttributes.BOLD}>
           Add Material
         </text>
@@ -62,6 +62,7 @@ function SourceLayer({ modal, context }: ModalRenderProps<Extract<FilePickerModa
             <box
               key={option.id}
               style={{
+                flexDirection: 'row',
                 backgroundColor: isSelected ? subjectColor : undefined,
                 justifyContent: 'space-between',
               }}
@@ -77,7 +78,7 @@ function SourceLayer({ modal, context }: ModalRenderProps<Extract<FilePickerModa
           );
         })}
       </box>
-      <box style={{ justifyContent: 'space-between' }}>
+      <box style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
         <text fg={modal.error ? THEME.danger : THEME.textMuted}>{modal.error ?? '↑↓ move'}</text>
         <text fg={THEME.textMuted}>enter continue</text>
       </box>
@@ -88,7 +89,7 @@ function SourceLayer({ modal, context }: ModalRenderProps<Extract<FilePickerModa
 function UrlLayer({ modal }: { modal: Extract<FilePickerModalState, { layer: 'url' }> }) {
   return (
     <>
-      <box style={{ justifyContent: 'space-between', marginBottom: 1 }}>
+      <box style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 1 }}>
         <text fg={THEME.text} attributes={TextAttributes.BOLD}>
           Material URL
         </text>
@@ -103,7 +104,7 @@ function UrlLayer({ modal }: { modal: Extract<FilePickerModalState, { layer: 'ur
           {!modal.downloading && <span fg={THEME.primary}>█</span>}
         </text>
       </box>
-      <box style={{ justifyContent: 'space-between' }}>
+      <box style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
         <text fg={modal.error ? THEME.danger : THEME.textMuted}>
           {modal.error ? truncateError(modal.error) : '← sources'}
         </text>
@@ -122,7 +123,7 @@ function BrowserLayer({ modal, context }: ModalRenderProps<Extract<FilePickerMod
 
   return (
     <>
-      <box style={{ justifyContent: 'space-between', marginBottom: 1 }}>
+      <box style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 1 }}>
         <text fg={THEME.text} attributes={TextAttributes.BOLD}>
           Select Material
         </text>
@@ -144,6 +145,7 @@ function BrowserLayer({ modal, context }: ModalRenderProps<Extract<FilePickerMod
               <box
                 key={entry.path}
                 style={{
+                  flexDirection: 'row',
                   backgroundColor: isSelected ? subjectColor : undefined,
                   justifyContent: 'space-between',
                 }}
@@ -168,13 +170,13 @@ function BrowserLayer({ modal, context }: ModalRenderProps<Extract<FilePickerMod
           })
         )}
       </box>
-      <box style={{ justifyContent: 'space-between' }}>
+      <box style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
         <text fg={state.error ? THEME.danger : THEME.textMuted}>
           {state.error ? truncateError(state.error) : state.cwd === HOME_DIR ? '← sources' : '← parent'}
         </text>
         <text fg={THEME.textMuted}>enter open/select</text>
       </box>
-      <box style={{ justifyContent: 'flex-end' }}>
+      <box style={{ flexDirection: 'row', justifyContent: 'flex-end' }}>
         <text fg={THEME.textMuted}>
           {`${windowStart + 1}-${windowStart + visibleEntries.length}/${state.entries.length}`}
         </text>

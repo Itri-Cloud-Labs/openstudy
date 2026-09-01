@@ -16,7 +16,7 @@ export function ModelsLayer({ modal, context }: ModalRenderProps<ModelsListState
 
   return (
     <>
-      <box style={{ justifyContent: 'space-between', marginBottom: 1 }}>
+      <box style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 1 }}>
         <text fg={THEME.text} attributes={TextAttributes.BOLD}>
           {getProviderLabel(modal.provider)}
         </text>
@@ -36,6 +36,7 @@ export function ModelsLayer({ modal, context }: ModalRenderProps<ModelsListState
             <box
               key={modelOption.id}
               style={{
+                flexDirection: 'row',
                 backgroundColor: isSelected ? subjectColor : undefined,
                 justifyContent: 'space-between',
               }}
@@ -51,7 +52,7 @@ export function ModelsLayer({ modal, context }: ModalRenderProps<ModelsListState
           );
         })}
       </box>
-      <box style={{ justifyContent: 'space-between' }}>
+      <box style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
         <text fg={THEME.textMuted}>
           {modal.subProvider
             ? `← back ${modelWindowStart + 1}-${modelWindowStart + visibleModels.length}/${modelOptions.length}`

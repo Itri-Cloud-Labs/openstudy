@@ -168,6 +168,7 @@ export const SessionScreen = ({
                     <box
                       key={mode.label}
                       style={{
+                        flexDirection: 'row',
                         backgroundColor: active ? presentation.subjectColor : undefined,
                         paddingLeft: 1,
                         paddingRight: 1,
@@ -250,7 +251,7 @@ function SidebarSection({ title, children }: { title: string; children: React.Re
 
 function SidebarRow({ label, value, valueColor = THEME.text }: { label: string; value: string; valueColor?: string }) {
   return (
-    <box style={{ justifyContent: 'space-between' }}>
+    <box style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
       <text fg={THEME.textMuted}>{label}</text>
       <text fg={valueColor}>{truncate(value, 22)}</text>
     </box>
