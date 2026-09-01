@@ -1,141 +1,128 @@
 # OpenStudy
 
-OpenStudy is an AI-powered study assistant that runs in your terminal. It is built as an OpenCode-inspired TUI for asking study questions, selecting a subject, choosing a model, adjusting reasoning effort, attaching study material, and working in a preferred study language without leaving the command line.
+Study with an AI without leaving your terminal.
 
-The project is currently focused on a local-first CLI experience using React, OpenTUI, TypeScript, and the Codex app-server protocol.
+OpenStudy gives a study session enough context to be useful: your subject, model, reasoning level, source material, and preferred language. Pick those once, write a prompt, and keep the rest of the screen quiet.
 
-## Purpose
+It is a young project. Summary mode works. Quiz, FlashCards, Exercises, AI Teacher, and follow-up prompts are visible in the interface but are not wired up yet.
 
-OpenStudy is designed to make AI-guided studying fast and lightweight. Instead of opening a browser or switching tools, you can launch a terminal interface, choose the context for your study session, and start with a simple prompt such as `Hi`.
+## What works today
 
-Current goals:
+- A keyboard-first terminal interface built with React and OpenTUI
+- Codex and OpenCode providers, using their existing local authentication
+- Model and reasoning options discovered from the selected provider
+- Local files and HTTP or HTTPS documents as study material
+- AI-generated summaries with structured sections
+- Saved preferences and study sessions under `~/.openstudy`
+- A setup wizard and slash commands for setup, sessions, and exit
 
-- Provide a focused terminal UI for study sessions.
-- Let users switch study subjects from the keyboard.
-- Let users select the AI model used for guidance.
-- Support reasoning-effort, material, and language controls.
-- Keep local session settings in the user's home directory.
+OpenStudy runs provider requests without tools. The Codex adapter also uses a read-only sandbox and never asks for approval to change files.
 
-## Features
+## Before you install
 
-- Terminal UI built with OpenTUI (Zig-native renderer) and React.
-- First-launch setup flow.
-- Codex and OpenCode provider support.
-- Subject selector with `tab`.
-- Model selector with `ctrl+m`.
-- Reasoning selector with `ctrl+r`.
-- Material picker with `ctrl+f`.
-- Study language selector with `ctrl+l`.
-- Slash commands, including `/setup` and `/exit`.
-- Local config and session storage in `~/.openstudy`.
+You need:
 
-## Requirements
+- [Bun](https://bun.sh) 1.3 or newer
+- npm 10 or newer
+- A terminal at least 73 columns wide and 23 rows tall
+- Either the [Codex CLI](https://github.com/openai/codex) or [OpenCode](https://opencode.ai) installed and authenticated
 
-- Bun 1.3 or newer (required by the OpenTUI renderer).
-- npm 10 or newer.
-- A terminal large enough for the TUI. The current minimum is `73x23`.
-- Codex login/configuration available locally, if you want to use the Codex provider.
-
-## Local setup
-
-Clone the repository:
+For Codex:
 
 ```bash
-git clone https://github.com/ItriIbouanane/openstudy.git
+codex login
+```
+
+For OpenCode:
+
+```bash
+opencode auth login
+```
+
+## Run it
+
+```bash
+git clone https://github.com/Itri-Cloud-Labs/openstudy.git
 cd openstudy
-```
-
-Install dependencies:
-
-```bash
 bun install --frozen-lockfile
-```
-
-Run the app in development mode:
-
-```bash
 npm run dev
 ```
 
-Build the project:
+The first launch opens setup. Choose a provider, then return to the home screen and fill in the session options. If you have no prompt in mind, type `Hi`.
+
+To build and run the compiled CLI:
 
 ```bash
 npm run build
-```
-
-Run the compiled CLI:
-
-```bash
 npm start
 ```
 
-Reset OpenStudy settings while preserving saved sessions and downloaded material:
+## Controls
+
+| Key | Home screen | Study session |
+| --- | --- | --- |
+| `enter` | Start a session | Submit the prompt |
+| `tab` | Choose a subject | |
+| `ctrl+m` | Choose a model | |
+| `ctrl+r` | Choose reasoning effort | |
+| `ctrl+f` | Choose study material | |
+| `ctrl+l` | Choose a language | Move to the next study mode |
+| `ctrl+c` | Close a modal or exit | Close a modal or exit |
+
+Slash commands work in both prompts:
+
+- `/setup` opens provider setup.
+- `/sessions` opens saved sessions.
+- `/exit` closes OpenStudy.
+
+## Study material
+
+The material picker accepts supported documents from your home directory. It can also download a document from an HTTP or HTTPS URL. Downloads have a 25 MB limit and go into `~/.openstudy/documents`.
+
+Supported formats include PDF, EPUB, Markdown, plain text, Office documents, OpenDocument files, CSV, JSON, XML, YAML, and LaTeX.
+
+Provider behavior differs slightly. Codex reads local files through its read-only sandbox. OpenCode receives the material reference in the study prompt.
+
+## Local data
+
+OpenStudy keeps its state in `~/.openstudy`:
+
+```text
+~/.openstudy/
+├── config.json       provider choice and credentials
+├── session.json      current study preferences
+├── documents/        material downloaded from URLs
+└── <session-id>/     one directory per saved session
+```
+
+Reset preferences while keeping saved sessions and downloaded documents:
 
 ```bash
 npm run reset
 ```
 
-To remove all local OpenStudy data, including saved sessions and downloaded material:
+Delete all OpenStudy data:
 
 ```bash
 npm run reset:all -- --yes
 ```
 
-## Usage
+## Development
 
-Start OpenStudy, then use the prompt at the center of the screen. If you are not sure what to ask, say `Hi` and the selected model will guide you.
+Run the complete local quality gate before opening a change:
 
-Keyboard shortcuts:
-
-- `tab`: choose a subject.
-- `ctrl+m`: choose a model.
-- `ctrl+r`: choose reasoning effort.
-- `ctrl+f`: choose study material.
-- `ctrl+l`: choose study language.
-- `ctrl+c`: exit or close an active modal.
-- Inside a session, `ctrl+l` moves to the next study mode.
-
-Slash commands:
-
-- `/setup`: open the setup flow.
-- `/exit`: exit the CLI.
-- `/sessions`: open saved sessions.
-
-## Configuration
-
-OpenStudy stores local settings under:
-
-```text
-~/.openstudy
+```bash
+npm run check
 ```
 
-Important files:
+That command checks formatting, lint rules, TypeScript, tests, the production build, and package contents. The narrower commands are documented in [DEVELOPMENT.md](DEVELOPMENT.md).
 
-- `config.json`: provider configuration.
-- `session.json`: current subject, model, reasoning effort, material, and study language.
-
-## Development scripts
-
-- `npm run dev`: run the TypeScript source with Bun.
-- `npm run typecheck`: type-check source and tests without emitting files.
-- `npm run lint`: run Biome's linter.
-- `npm run format`: format supported project files.
-- `npm test`: run the test suite once.
-- `npm run test:watch`: re-run tests as files change.
-- `npm run audit`: check dependencies for high-severity advisories.
-- `npm run build`: clean and compile TypeScript into `dist`.
-- `npm run check`: run the complete local and CI quality gate.
-- `npm start`: run `dist/index.js`.
-- `npm run reset`: reset settings without deleting saved study data.
-
-See `DEVELOPMENT.md` for the full workflow, project structure, package checks, and maintenance commands.
+Do not edit `dist`. The build recreates it from `src`.
 
 ## Contributions
 
-OpenStudy is not accepting external contributions at this time.
-
-You may fork and modify the project under the terms of the GNU General Public License v3.0. The license does not grant permission to use the OpenStudy name or trademarks for modified versions.
+OpenStudy is not accepting external contributions yet. You can still fork, study, and modify the code under GPLv3. The license does not grant rights to the OpenStudy name or trademarks for modified versions.
 
 ## License
 
-OpenStudy is free and open-source software licensed under the GNU General Public License v3.0. See `LICENSE` for the full terms.
+OpenStudy is free software under the [GNU General Public License v3.0](LICENSE).
