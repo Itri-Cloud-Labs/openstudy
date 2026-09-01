@@ -1,6 +1,6 @@
 import React from 'react';
 import { TextAttributes } from '@opentui/core';
-import { useAppKeys } from '../../shared/terminal/keymap.js';
+import { useAppKeys, useAppPaste } from '../../shared/terminal/keymap.js';
 
 interface ApiKeyInputProps {
   providerLabel: string;
@@ -31,6 +31,11 @@ export const ApiKeyInput = ({ providerLabel, onSubmit }: ApiKeyInputProps) => {
     if (key.ctrl || key.meta || key.escape) return;
 
     setValue(prev => prev + input);
+    setError('');
+  });
+
+  useAppPaste(({ input }) => {
+    setValue(current => current + input);
     setError('');
   });
 

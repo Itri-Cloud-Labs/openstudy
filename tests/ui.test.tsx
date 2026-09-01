@@ -6,6 +6,7 @@ import { HomeScreen } from '../src/features/home/HomeScreen.tsx';
 import { render as renderMessage } from '../src/modals/message.tsx';
 import type { ModalRenderContext } from '../src/modals/types.ts';
 import { Logo } from '../src/shared/ui/Logo.tsx';
+import { PromptInput } from '../src/shared/ui/PromptInput.tsx';
 
 describe('OpenTUI rendering', () => {
   it('logo renders the OpenStudy ASCII art', async () => {
@@ -80,6 +81,33 @@ describe('OpenTUI rendering', () => {
         .find(line => line.includes('Mathematics'));
       assert.ok(contextLine);
       assert.equal(contextLine.indexOf('Mathematics'), 13);
+    } finally {
+      setup.renderer.destroy();
+    }
+  });
+
+  it('accepts bracketed paste in the prompt', async () => {
+    const noop = () => {};
+    const setup = await testRender(
+      <PromptInput
+        onSubmit={noop}
+        commands={[]}
+        commandContext={{ onExit: noop, onSetup: noop, openModal: noop, closeModal: noop }}
+        width={50}
+        inputActive
+        modalTriggers={[]}
+        onModalTrigger={noop}
+        placeholder="Ask anything"
+      />,
+      { width: 60, height: 8 },
+    );
+
+    try {
+      await setup.renderOnce();
+      await setup.mockInput.pasteBracketedText('PASTED TEXT');
+      await new Promise(resolve => setTimeout(resolve, 10));
+      await setup.renderOnce();
+      assert.match(setup.captureCharFrame(), /PASTED TEXT/);
     } finally {
       setup.renderer.destroy();
     }

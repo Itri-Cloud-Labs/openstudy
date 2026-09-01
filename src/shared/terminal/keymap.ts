@@ -1,6 +1,6 @@
 import React from 'react';
-import type { KeyEvent } from '@opentui/core';
-import { useKeyboard } from '@opentui/react';
+import { decodePasteBytes, type KeyEvent } from '@opentui/core';
+import { useKeyboard, usePaste } from '@opentui/react';
 
 export const SHORTCUTS = {
   subject: { key: 'tab', input: '', tab: true, label: 'subject' },
@@ -44,18 +44,8 @@ export interface AppKeyEvent {
   key: AppKey;
 }
 
-const ARROW_NAMES: Record<string, keyof AppKey> = {
-  up: 'upArrow',
-  down: 'downArrow',
-  left: 'leftArrow',
-  right: 'rightArrow',
-  pageup: 'pageUp',
-  pagedown: 'pageDown',
-};
-
-/** Translate an OpenTUI parsed key event into the app-wide key shape. */
-export function toAppKeyEvent(event: KeyEvent): AppKeyEvent {
-  const key: AppKey = {
+function createAppKey(): AppKey {
+  return {
     upArrow: false,
     downArrow: false,
     leftArrow: false,
@@ -70,9 +60,25 @@ export function toAppKeyEvent(event: KeyEvent): AppKeyEvent {
     backspace: false,
     delete: false,
     space: false,
-    ctrl: event.ctrl,
-    meta: event.meta,
+    ctrl: false,
+    meta: false,
   };
+}
+
+const ARROW_NAMES: Record<string, keyof AppKey> = {
+  up: 'upArrow',
+  down: 'downArrow',
+  left: 'leftArrow',
+  right: 'rightArrow',
+  pageup: 'pageUp',
+  pagedown: 'pageDown',
+};
+
+/** Translate an OpenTUI parsed key event into the app-wide key shape. */
+export function toAppKeyEvent(event: KeyEvent): AppKeyEvent {
+  const key = createAppKey();
+  key.ctrl = event.ctrl;
+  key.meta = event.meta;
 
   const name = event.name;
   if (name === 'return') key.return = true;
@@ -116,5 +122,21 @@ export function useAppKeys(handler: (event: AppKeyEvent) => void, options: UseAp
   useKeyboard(event => {
     if (!activeRef.current) return;
     handlerRef.current(toAppKeyEvent(event));
+  });
+}
+
+/** Subscribe to bracketed paste events using the same shape as keyboard input. */
+export function useAppPaste(handler: (event: AppKeyEvent) => void, options: UseAppKeysOptions = {}): void {
+  const { isActive = true } = options;
+  const handlerRef = React.useRef(handler);
+  handlerRef.current = handler;
+  const activeRef = React.useRef(isActive);
+  activeRef.current = isActive;
+
+  usePaste(event => {
+    if (!activeRef.current) return;
+    const input = decodePasteBytes(event.bytes);
+    if (!input) return;
+    handlerRef.current({ input, key: createAppKey() });
   });
 }

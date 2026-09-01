@@ -16,7 +16,7 @@ import { createProvider, PROVIDER_METADATA } from '../providers/index.js';
 import { useTerminalSize } from '../shared/hooks/useTerminalSize.js';
 import { formatMaterialLabel } from '../shared/text.js';
 import { THEME } from '../shared/theme.js';
-import { useAppKeys } from '../shared/terminal/keymap.js';
+import { useAppKeys, useAppPaste } from '../shared/terminal/keymap.js';
 import { LoadingScreen } from '../shared/ui/LoadingScreen.js';
 import { loadAppPreferences, loadConfig, saveConfig, updatePreferences } from '../utils/config.js';
 import { activateSession as activateSavedSession, createSession } from '../utils/sessions.js';
@@ -189,6 +189,16 @@ function StudyWorkspace({ route, commands, inputDisabled, onExit, onRouteChange 
     }
 
     if (key.ctrl && input === 'c') onExit();
+  });
+
+  useAppPaste(({ input, key }) => {
+    if (inputDisabled || !modalManager.modal) return;
+    modalManager.modal.module.handleInput?.({
+      input,
+      key,
+      modal: modalManager.modal.state,
+      context: modalManager.context,
+    });
   });
 
   const commandContext = React.useMemo<CommandContext>(

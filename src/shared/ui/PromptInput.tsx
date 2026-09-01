@@ -4,7 +4,7 @@ import type { CommandContext, CommandModule } from '../../commands/index.js';
 import type { ModalTrigger } from '../../modals/index.js';
 import { useBlinkCursor } from '../hooks/useBlinkCursor.js';
 import { truncate } from '../text.js';
-import { useAppKeys } from '../terminal/keymap.js';
+import { useAppKeys, useAppPaste } from '../terminal/keymap.js';
 import { getCommandSuggestions, wrapInput } from './prompt-model.js';
 import type { AppKey } from '../terminal/keymap.js';
 import { THEME } from '../theme.js';
@@ -203,6 +203,8 @@ export const PromptInput = ({
     },
     { isActive: inputActive },
   );
+
+  useAppPaste(({ input }) => setValue(current => current + input), { isActive: inputActive });
 
   const isPlaceholder = value.length === 0;
   const contentWidth = Math.max(1, width - ACCENT_WIDTH - INPUT_PADDING_X * 2);
