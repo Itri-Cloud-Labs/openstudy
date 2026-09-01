@@ -127,10 +127,10 @@ The intended experience is local-first, keyboard-driven, calm, and focused. User
 ## Repository Policy
 
 - External contributions are currently not accepted.
-- Users may fork under the Open ICL License 1.0.0 terms.
-- Forks must use a different project name and keep corresponding source publicly available when redistributed.
-- Internal use is allowed, including by companies and other for-profit organizations.
-- Selling the software, selling modified versions, paid distribution, or paid hosted access requires written permission from the project owner.
+- OpenStudy is licensed under the GNU General Public License v3.0 only.
+- Users may use, modify, and distribute the project under the GPLv3 terms.
+- Distributed modified versions must remain under GPLv3 and include corresponding source as required by the license.
+- The license does not grant trademark rights to the OpenStudy name.
 
 ## Agent Behavior Expectations
 

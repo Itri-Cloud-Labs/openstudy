@@ -1,22 +1,5 @@
 # OpenStudy
 
-> [!IMPORTANT]
-> **OpenStudy licensing roadmap**
-> 
-> OpenStudy is currently released under the **Open ICL License** to allow rapid development in its early stage.
-> 
-> It will transition to a fully open source license (**AGPL v3**) once the project reaches maturity.
-> 
-> This transition will occur when **ALL** of the following milestones are reached:
-> 
-> - Version **1.0** is released  
-> - **2,000 weekly downloads** sustained for **2 consecutive weeks**  
-> - **500 stars** on the repository  
-> 
-> If these milestones are not all reached, the project will still transition to an open source license after a reasonable period of time...
-> 
-> The goal is not to restrict the project long-term, but to ensure it reaches a stable and high-quality state before opening it to the community.
-
 OpenStudy is an AI-powered study assistant that runs in your terminal. It is built as an OpenCode-inspired TUI for asking study questions, selecting a subject, choosing a model, adjusting reasoning effort, attaching study material, and working in a preferred study language without leaving the command line.
 
 The project is currently focused on a local-first CLI experience using React, OpenTUI, TypeScript, and the Codex app-server protocol.
@@ -151,18 +134,8 @@ See `DEVELOPMENT.md` for the full workflow, project structure, package checks, a
 
 OpenStudy is not accepting external contributions at this time.
 
-Users may still fork the project, as long as the fork follows the project license and policy:
-
-- The fork must use a different project name and must not be distributed as `OpenStudy`.
-- The fork must remain publicly source-available.
-- The fork must preserve copyright notices and license terms.
-- Internal use is allowed, including internal use by companies and other for-profit organizations.
-- Selling the software, selling modified versions, paid distribution, or paid hosted access requires written permission from the project owner.
+You may fork and modify the project under the terms of the GNU General Public License v3.0. The license does not grant permission to use the OpenStudy name or trademarks for modified versions.
 
 ## License
 
-OpenStudy is licensed under the Open ICL License 1.0.0. See `LICENSE` for the full terms.
-
-This is a source-available, sale-restricted software license. It permits use, including internal business use, forking, modification, and redistribution under the same license, provided redistributed forks use a different name and keep their complete corresponding source publicly available.
-
-This license is not OSI-approved open source because restrictions on selling and paid access are not compatible with the Open Source Definition.
+OpenStudy is free and open-source software licensed under the GNU General Public License v3.0. See `LICENSE` for the full terms.
