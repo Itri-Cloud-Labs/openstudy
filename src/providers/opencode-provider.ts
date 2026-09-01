@@ -139,6 +139,7 @@ export class OpenCodeProvider implements StudyProvider<'opencode'> {
         ? { providerID: modelString.slice(0, slashIndex), modelID: modelString.slice(slashIndex + 1) }
         : undefined;
     const fullInput = buildMaterialPrompt(input, resolvePromptFiles(options));
+    const variant = options.reasoningEffort?.trim();
 
     let sessionId: string | null = null;
 
@@ -157,6 +158,7 @@ export class OpenCodeProvider implements StudyProvider<'opencode'> {
         sessionID: sessionId,
         parts: [{ type: 'text', text: fullInput }],
         ...(model ? { model } : {}),
+        ...(variant ? { variant } : {}),
         agent: 'study',
         ...(options.system ? { system: options.system } : {}),
       });
@@ -196,7 +198,7 @@ export class OpenCodeProvider implements StudyProvider<'opencode'> {
   }
 }
 
-function toModelOptions(data: ProviderListResponse): ProviderModelOption[] {
+export function toModelOptions(data: ProviderListResponse): ProviderModelOption[] {
   const connected = new Set(data.connected ?? []);
   const options: ProviderModelOption[] = [];
 
@@ -209,13 +211,34 @@ function toModelOptions(data: ProviderListResponse): ProviderModelOption[] {
         id,
         label: `${model.name || modelId} (${provider.name || provider.id})`,
         model: id,
-        reasoningLevels: [],
+        reasoningLevels: Object.keys(model.variants ?? {}).map(variant => ({
+          id: variant,
+          label: reasoningVariantLabel(variant),
+          value: variant,
+        })),
         group: { id: provider.id, name: provider.name || provider.id },
       });
     }
   }
 
   return options.sort((left, right) => left.label.localeCompare(right.label));
+}
+
+function reasoningVariantLabel(variant: string): string {
+  const labels: Record<string, string> = {
+    none: 'None',
+    minimal: 'Minimal',
+    low: 'Low',
+    medium: 'Medium',
+    high: 'High',
+    xhigh: 'Extra High',
+    max: 'Max',
+    ultra: 'Ultra',
+  };
+
+  return (
+    labels[variant.toLowerCase()] ?? variant.replace(/[_-]+/g, ' ').replace(/\b\w/g, letter => letter.toUpperCase())
+  );
 }
 
 export async function disposeOpenCodeProvider(): Promise<void> {

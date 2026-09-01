@@ -3,6 +3,7 @@ import test from 'node:test';
 import { CodexAppServer } from '../src/providers/codex-app-server.ts';
 import { withRequestTimeout } from '../src/providers/codex-provider.ts';
 import { createProvider, PROVIDER_METADATA } from '../src/providers/index.ts';
+import { toModelOptions } from '../src/providers/opencode-provider.ts';
 
 test('provider metadata is complete and unique', () => {
   const ids = PROVIDER_METADATA.map(metadata => metadata.id);
@@ -37,6 +38,32 @@ test('getModels returns isolated copies per instance', () => {
   firstModels[0]?.reasoningLevels.push({ id: 'mutated', label: 'Mutated', value: 'mutated' });
 
   assert.deepEqual(second.getModels(), createProvider(metadata.id).getModels());
+});
+
+test('OpenCode model variants become reasoning levels', () => {
+  const response = {
+    connected: ['openai'],
+    default: { openai: 'gpt-test' },
+    all: [
+      {
+        id: 'openai',
+        name: 'OpenAI',
+        models: {
+          'gpt-test': {
+            name: 'GPT Test',
+            variants: { low: {}, medium: {}, high: {}, xhigh: {} },
+          },
+        },
+      },
+    ],
+  } as never;
+
+  assert.deepEqual(toModelOptions(response)[0]?.reasoningLevels, [
+    { id: 'low', label: 'Low', value: 'low' },
+    { id: 'medium', label: 'Medium', value: 'medium' },
+    { id: 'high', label: 'High', value: 'high' },
+    { id: 'xhigh', label: 'Extra High', value: 'xhigh' },
+  ]);
 });
 
 const ECHO_SERVER_SCRIPT = [
