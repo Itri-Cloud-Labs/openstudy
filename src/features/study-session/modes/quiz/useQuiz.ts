@@ -3,7 +3,7 @@ import type { Provider } from '../../../../domain/provider.js';
 import { materialService, type ResolvedMaterial } from '../../../../infrastructure/materials/index.js';
 import { createProvider } from '../../../../providers/index.js';
 import { getSessionById, saveSessionResult } from '../../../../utils/sessions.js';
-import { generateQuiz } from './generate-quiz.js';
+import { generateQuiz, type QuizRoundIntent } from './generate-quiz.js';
 import { normalizeQuizPayload, type QuizPayload } from './quiz-payload.js';
 
 export type QuizState =
@@ -23,7 +23,7 @@ export interface UseQuizOptions {
 
 export interface UseQuizResult {
   quizState: QuizState;
-  generateNewQuiz: () => void;
+  generateNewQuiz: (intent?: QuizRoundIntent, focusTopics?: string[]) => void;
 }
 
 export function useQuiz(options: UseQuizOptions): UseQuizResult {
@@ -32,14 +32,22 @@ export function useQuiz(options: UseQuizOptions): UseQuizResult {
   const [generationRequest, setGenerationRequest] = React.useState(0);
   const handledGeneration = React.useRef(0);
   const previousQuestions = React.useRef<string[]>([]);
+  const nextRound = React.useRef<{ intent: QuizRoundIntent; focusTopics: string[] }>({
+    intent: 'adaptive',
+    focusTopics: [],
+  });
 
-  const generateNewQuiz = React.useCallback(() => {
-    if (state.status === 'ready') {
-      previousQuestions.current = state.quiz.questions.map(question => question.question);
-    }
-    setState({ status: 'loading' });
-    setGenerationRequest(current => current + 1);
-  }, [state]);
+  const generateNewQuiz = React.useCallback(
+    (intent: QuizRoundIntent = 'adaptive', focusTopics: string[] = []) => {
+      if (state.status === 'ready') {
+        previousQuestions.current = state.quiz.questions.map(question => question.question);
+      }
+      nextRound.current = { intent, focusTopics };
+      setState({ status: 'loading' });
+      setGenerationRequest(current => current + 1);
+    },
+    [state],
+  );
 
   React.useEffect(() => {
     if (!enabled) return;
@@ -89,6 +97,8 @@ export function useQuiz(options: UseQuizOptions): UseQuizResult {
       material,
       studyLanguage,
       previousQuestions: previousQuestions.current,
+      roundIntent: nextRound.current.intent,
+      focusTopics: nextRound.current.focusTopics,
       signal: controller.signal,
     })
       .then(quiz => {

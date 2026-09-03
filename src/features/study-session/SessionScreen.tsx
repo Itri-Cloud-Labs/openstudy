@@ -107,6 +107,12 @@ export const SessionScreen = ({
               contentHeight={contentHeight}
               quizState={quizState}
               onNewRound={generateNewQuiz}
+              onAction={(action, context) => {
+                if (action === 'weak-spots') generateNewQuiz('weak-spots', context.weakTopics);
+                if (action === 'raise-level') generateNewQuiz('raise-level');
+                if (action === 'transfer') generateNewQuiz('transfer');
+                if (action === 'exam') generateNewQuiz('exam');
+              }}
               inputActive={inputActive}
               commandMenuActive={commandMenuActive}
             />

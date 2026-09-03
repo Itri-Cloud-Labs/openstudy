@@ -62,7 +62,14 @@ function isAbortError(error: unknown): boolean {
 }
 
 function isContextOverflowError(message: string, error: unknown): boolean {
-  if (/context|token.*limit|prompt token/i.test(message)) return true;
+  if (
+    /context[_ -]?(?:length|window).*?(?:exceed|limit|maximum|too (?:large|long))/i.test(message) ||
+    /(?:exceed|maximum|limit|too (?:large|long)).*?context[_ -]?(?:length|window)/i.test(message) ||
+    /(?:too many|maximum|exceed(?:ed|s)?).*?(?:input |prompt )?tokens?/i.test(message) ||
+    /prompt (?:is )?too long/i.test(message)
+  ) {
+    return true;
+  }
   if (!error || typeof error !== 'object') return false;
 
   return (error as Record<string, unknown>).name === 'ContextOverflowError';

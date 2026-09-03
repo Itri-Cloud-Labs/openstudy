@@ -3,6 +3,7 @@ import test from 'node:test';
 import { CodexAppServer } from '../src/providers/codex-app-server.ts';
 import { withRequestTimeout } from '../src/providers/codex-provider.ts';
 import { createProvider, PROVIDER_METADATA } from '../src/providers/index.ts';
+import { CONTEXT_OVERFLOW_MESSAGE, normalizeProviderError } from '../src/providers/errors.ts';
 import { toModelOptions } from '../src/providers/opencode-provider.ts';
 
 test('provider metadata is complete and unique', () => {
@@ -160,5 +161,19 @@ test('withRequestTimeout rejects with the timeout message', async () => {
   await assert.rejects(
     withRequestTimeout(new Promise<void>(() => undefined), 10, 'timed out waiting'),
     /timed out waiting/,
+  );
+});
+
+test('schema paths containing context are not reported as context-window overflow', () => {
+  const message =
+    "Invalid schema: In context=('properties', 'questions', 'items'), 'required' must include every property.";
+  assert.equal(normalizeProviderError(new Error(message)).message, message);
+  assert.notEqual(normalizeProviderError(new Error(message)).message, CONTEXT_OVERFLOW_MESSAGE);
+});
+
+test('actual token limit failures are reported as context-window overflow', () => {
+  assert.equal(
+    normalizeProviderError(new Error('This model maximum context length is 8192 tokens.')).message,
+    CONTEXT_OVERFLOW_MESSAGE,
   );
 });

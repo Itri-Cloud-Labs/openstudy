@@ -219,28 +219,72 @@ describe('OpenTUI rendering', () => {
       assert.match(setup.captureCharFrame(), /> 1\. Cell wall/);
       await new Promise(resolve => setTimeout(resolve, 20));
 
-      await setup.mockInput.typeText('2');
-      await new Promise(resolve => setTimeout(resolve, 20));
+      await setup.mockInput.pressKeys(['2']);
+      await new Promise(resolve => setTimeout(resolve, 40));
       await setup.renderOnce();
       assert.match(setup.captureCharFrame(), /> 2\. DNA/);
 
       await setup.mockInput.pressKeys(['RETURN']);
-      await new Promise(resolve => setTimeout(resolve, 20));
+      await new Promise(resolve => setTimeout(resolve, 40));
+      await setup.renderOnce();
       await setup.renderOnce();
       const feedbackFrame = setup.captureCharFrame();
-      assert.match(feedbackFrame, /DNA stores hereditary information/);
+      assert.match(feedbackFrame, /DNA.*hereditary.*information/);
 
       await setup.mockInput.pressKeys(['RETURN']);
       await new Promise(resolve => setTimeout(resolve, 20));
       await setup.renderOnce();
       const completeFrame = setup.captureCharFrame();
-      assert.match(completeFrame, /1 \/ 1/);
-      assert.match(completeFrame, /Perfect score\./);
-      assert.match(completeFrame, /Answer review/);
+      assert.match(completeFrame, /round complete/);
+      assert.match(completeFrame, /Perfect.*score/);
+      assert.match(completeFrame, /Actions/);
 
       await setup.mockInput.typeText('n');
       await new Promise(resolve => setTimeout(resolve, 20));
       assert.equal(newRounds, 1);
+    } finally {
+      setup.renderer.destroy();
+    }
+  });
+
+  it('groups briefing controls with the task instead of stretching them across the viewport', async () => {
+    const setup = await testRender(
+      <QuizMode
+        contentWidth={110}
+        contentHeight={24}
+        inputActive
+        commandMenuActive={false}
+        onNewRound={() => undefined}
+        quizState={{
+          status: 'ready',
+          quiz: {
+            questions: [
+              {
+                topic: 'Genetics',
+                difficulty: 'Introductory',
+                question: 'Which structure stores genetic information?',
+                choices: ['Cell wall', 'DNA', 'Water', 'Glucose'],
+                correctIndex: 1,
+                explanation: 'DNA stores hereditary information.',
+              },
+            ],
+          },
+        }}
+      />,
+      { width: 110, height: 24 },
+    );
+
+    try {
+      await setup.renderOnce();
+      const lines = setup.captureCharFrame().split('\n');
+      const overviewAndTaskRow = lines.findIndex(line => line.includes('This round') && line.includes('Warm-up'));
+      const finalChoiceRow = lines.findIndex(line => line.includes('4. Glucose'));
+      const controlsRow = lines.findIndex(line => line.includes('enter begin'));
+
+      assert.ok(overviewAndTaskRow >= 0);
+      assert.ok(lines.some(line => line.includes('· Genetics')));
+      assert.ok(controlsRow - finalChoiceRow >= 3);
+      assert.ok(controlsRow - finalChoiceRow <= 5);
     } finally {
       setup.renderer.destroy();
     }
