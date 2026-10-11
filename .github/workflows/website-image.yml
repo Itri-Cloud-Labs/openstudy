@@ -1,0 +1,77 @@
+name: Website image
+
+on:
+  push:
+    branches: [main]
+    tags: ['v*']
+    paths:
+      - website/**
+      - package.json
+      - bun.lock
+      - .dockerignore
+      - .github/workflows/website-image.yml
+  pull_request:
+    paths:
+      - website/**
+      - package.json
+      - bun.lock
+      - .dockerignore
+      - .github/workflows/website-image.yml
+
+permissions:
+  contents: read
+
+concurrency:
+  group: website-image-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  IMAGE: ghcr.io/${{ github.repository }}/website
+
+jobs:
+  image:
+    name: Build${{ github.event_name != 'pull_request' && ' and push' || '' }}
+    runs-on: blacksmith-4vcpu-ubuntu-2404
+    timeout-minutes: 15
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v6
+
+      - name: Set up Blacksmith Docker builder
+        uses: useblacksmith/setup-docker-builder@v2
+        with:
+          cache-key: website/Dockerfile
+
+      # Only pushes publish. Pull requests build the image without logging in,
+      # so they also work for forks, where GITHUB_TOKEN has no packages access.
+      - name: Log in to GHCR
+        if: github.event_name != 'pull_request'
+        uses: docker/login-action@v4
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Generate image tags and labels
+        id: meta
+        uses: docker/metadata-action@v6
+        with:
+          images: ${{ env.IMAGE }}
+          tags: |
+            type=raw,value=latest,enable={{is_default_branch}}
+            type=sha,format=short
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+
+      - name: Build and push image
+        uses: useblacksmith/build-push-action@v2
+        with:
+          context: .
+          file: website/Dockerfile
+          push: ${{ github.event_name != 'pull_request' }}
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
