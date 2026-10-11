@@ -119,6 +119,14 @@ That command checks formatting, lint rules, TypeScript, tests, the production bu
 
 Do not edit `dist`. The build recreates it from `src`.
 
+The project website lives in `website/` as a Vite, React, and Tailwind CSS v4 app. It is a workspace of this package, so the root `bun install` covers it. Start its dev server with:
+
+```bash
+npm run site
+```
+
+`npm run site:build` writes the static site to `website/dist`.
+
 ## Contributions
 
 OpenStudy is not accepting external contributions yet. You can still fork, study, and modify the code under GPLv3. The license does not grant rights to the OpenStudy name or trademarks for modified versions.

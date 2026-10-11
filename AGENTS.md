@@ -71,6 +71,7 @@ The intended experience is local-first, keyboard-driven, calm, and focused. User
 - `src/options`: static options such as study subjects.
 - `src/utils/config.ts`: local config/session persistence under `~/.openstudy`.
 - `src/utils/input.ts`: shared terminal input helpers, including mouse-report filtering.
+- `website`: marketing site built with Vite, React, and Tailwind CSS v4, installed as a Bun workspace of the root package. Design tokens live in the `@theme` block of `website/src/index.css`; components in `website/src/components` are styled with utility classes. Its terminal replicas (`HomeTerminal.tsx`, `SessionTerminal.tsx`) mirror `HomeScreen.tsx` and `SessionScreen.tsx`, so update them when those screens, the theme, or the controls change. Brand context lives in `PRODUCT.md`.
 - `dist`: generated build output and ignored by git. Do not edit or commit it unless project policy changes.
 
 ## Current Controls
@@ -101,6 +102,7 @@ The intended experience is local-first, keyboard-driven, calm, and focused. User
 - Package manager: `npm` scripts executed with Bun available (`bun test`, `bun run`).
 - Runtime: Bun >=1.3 (OpenTUI requirement).
 - Development command: `npm run dev`.
+- Run the website dev server: `npm run site`. Build it to `website/dist`: `npm run site:build`.
 - Build command: `npm run build`.
 - Start compiled app: `npm start`.
 - Reset local config: `npm run reset`.
