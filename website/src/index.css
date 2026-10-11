@@ -1,0 +1,182 @@
+/* Tokens mirror src/shared/theme.ts so the site and the TUI stay one identity. */
+@import "tailwindcss";
+
+@font-face {
+  font-family: "Familjen Grotesk";
+  src: url("/fonts/familjen-grotesk.woff2") format("woff2");
+  font-weight: 400 700;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "JetBrains Mono";
+  src: url("/fonts/jetbrains-mono.woff2") format("woff2");
+  font-weight: 100 800;
+  font-display: swap;
+}
+
+@property --subject {
+  syntax: "<color>";
+  inherits: true;
+  initial-value: #3b82f6;
+}
+
+@theme {
+  --color-*: initial;
+  --color-bg: #0a0a0a;
+  --color-panel: #141414;
+  --color-raised: #1f1f23;
+  --color-rule: #303030;
+  --color-rule-soft: #1f1f1f;
+  --color-text: #eeeeee;
+  --color-soft: #b4b4b4;
+  --color-muted: #8c8c8c;
+  --color-faint: #7a7a7a;
+  --color-ghost: #555555;
+  --color-amber: #fab283;
+  --color-amber-bright: #ffc9a3;
+  --color-code: #f4c7a1;
+  --color-success: #7fd88f;
+
+  --font-sans: "Familjen Grotesk", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+
+  --breakpoint-*: initial;
+  --breakpoint-sm: 481px;
+  --breakpoint-lg: 861px;
+
+  --ease-expo: cubic-bezier(0.16, 1, 0.3, 1);
+  --default-transition-duration: 160ms;
+  --default-transition-timing-function: ease;
+
+  --animate-*: initial;
+  --animate-rise: rise 900ms var(--ease-expo) both;
+  --animate-stage-in: stage-in 1100ms var(--ease-expo) 320ms both;
+  --animate-print: print 420ms var(--ease-expo) both;
+  --animate-blink: blink 1060ms steps(1) infinite;
+  --animate-modal-in: modal-in 180ms var(--ease-expo) both;
+  --animate-fade: fade 260ms ease-out both;
+
+  @keyframes rise {
+    from {
+      opacity: 0;
+      transform: translateY(0.45em);
+    }
+  }
+
+  @keyframes stage-in {
+    from {
+      opacity: 0;
+      transform: translateY(28px);
+    }
+  }
+
+  @keyframes print {
+    from {
+      opacity: 0;
+      clip-path: inset(0 100% 0 0);
+    }
+    to {
+      opacity: 1;
+      clip-path: inset(0 0 0 0);
+    }
+  }
+
+  @keyframes blink {
+    0%,
+    49% {
+      background: var(--color-text);
+      color: var(--color-raised);
+    }
+    50%,
+    100% {
+      background: transparent;
+      color: inherit;
+    }
+  }
+
+  @keyframes modal-in {
+    from {
+      opacity: 0;
+      transform: translateY(6px) scale(0.985);
+    }
+  }
+
+  @keyframes fade {
+    from {
+      opacity: 0;
+    }
+  }
+}
+
+/* The selected subject is set at runtime by StudyProvider. */
+@theme inline {
+  --color-subject: var(--subject);
+  --color-subject-text: var(--subject-text);
+  --color-on-subject: var(--on-subject);
+}
+
+:root {
+  --subject: #3b82f6;
+  --subject-text: #6ea4ff;
+  --on-subject: #000000;
+
+  --gutter: clamp(20px, 5vw, 56px);
+  --page: min(100% - 2 * var(--gutter), 1180px);
+
+  color-scheme: dark;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  :root {
+    transition: --subject 500ms cubic-bezier(0.16, 1, 0.3, 1);
+  }
+}
+
+@layer base {
+  html {
+    scroll-padding-top: 32px;
+  }
+
+  button {
+    cursor: pointer;
+  }
+
+  ::selection {
+    background: var(--color-amber);
+    color: var(--color-bg);
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--color-amber);
+    outline-offset: 3px;
+    border-radius: 2px;
+  }
+}
+
+/* The screen lights the desk under it, in the selected subject's color. */
+@utility desk-glow {
+  background: radial-gradient(60% 100% at 50% 0, color-mix(in oklab, var(--subject) 20%, transparent), transparent 72%);
+}
+
+@utility scrollbar-thin {
+  scrollbar-width: thin;
+}
+
+/*
+ * Install code blocks keep the original page's metrics: the <pre> uses the browser's default monospace face at the
+ * inherited body size, so its line box (27.2px) is taller than the 14px <code> inside it. Preflight resets this.
+ */
+@layer components {
+  .code-block {
+    font-family: monospace;
+    font-size: 1.0625rem;
+    line-height: 1.6;
+  }
+
+  .code-block code {
+    font-family: var(--font-mono);
+    font-size: 0.875rem;
+    line-height: 1.85;
+  }
+}

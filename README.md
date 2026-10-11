@@ -119,11 +119,13 @@ That command checks formatting, lint rules, TypeScript, tests, the production bu
 
 Do not edit `dist`. The build recreates it from `src`.
 
-The project website lives in `website/` as static files with no build step. Preview it with:
+The project website lives in `website/` as a Vite, React, and Tailwind CSS v4 app. It is a workspace of this package, so the root `bun install` covers it. Start its dev server with:
 
 ```bash
 npm run site
 ```
+
+`npm run site:build` writes the static site to `website/dist`.
 
 ## Contributions
 
