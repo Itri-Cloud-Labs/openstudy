@@ -103,6 +103,7 @@ The intended experience is local-first, keyboard-driven, calm, and focused. User
 - Runtime: Bun >=1.3 (OpenTUI requirement).
 - Development command: `npm run dev`.
 - Run the website dev server: `npm run site`. Build it to `website/dist`: `npm run site:build`.
+- Website image: `website/Dockerfile` (build context is the repo root) serves the built site with nginx on port 8080. `.github/workflows/website-image.yml` builds it on Blacksmith and pushes `ghcr.io/<owner>/openstudy/website` on pushes to `main` and `v*` tags; pull requests build without pushing.
 - Build command: `npm run build`.
 - Start compiled app: `npm start`.
 - Reset local config: `npm run reset`.
