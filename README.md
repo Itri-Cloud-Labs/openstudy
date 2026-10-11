@@ -119,6 +119,12 @@ That command checks formatting, lint rules, TypeScript, tests, the production bu
 
 Do not edit `dist`. The build recreates it from `src`.
 
+The project website lives in `website/` as static files with no build step. Preview it with:
+
+```bash
+npm run site
+```
+
 ## Contributions
 
 OpenStudy is not accepting external contributions yet. You can still fork, study, and modify the code under GPLv3. The license does not grant rights to the OpenStudy name or trademarks for modified versions.

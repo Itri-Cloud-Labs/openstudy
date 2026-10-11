@@ -23,6 +23,7 @@
   "homepage": "https://github.com/ItriIbouanane/openstudy#readme",
   "scripts": {
     "dev": "bun src/index.tsx",
+    "site": "bun website/index.html",
     "clean": "node scripts/clean.mjs",
     "build": "npm run clean && tsc -p tsconfig.build.json",
     "start": "bun dist/index.js",

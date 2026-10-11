@@ -71,6 +71,7 @@ The intended experience is local-first, keyboard-driven, calm, and focused. User
 - `src/options`: static options such as study subjects.
 - `src/utils/config.ts`: local config/session persistence under `~/.openstudy`.
 - `src/utils/input.ts`: shared terminal input helpers, including mouse-report filtering.
+- `website`: static marketing site (plain HTML, CSS, and one ES module; no build step). Its terminal replicas mirror `HomeScreen.tsx` and `SessionScreen.tsx`, so update them when those screens, the theme, or the controls change. Brand context lives in `PRODUCT.md`.
 - `dist`: generated build output and ignored by git. Do not edit or commit it unless project policy changes.
 
 ## Current Controls
@@ -101,6 +102,7 @@ The intended experience is local-first, keyboard-driven, calm, and focused. User
 - Package manager: `npm` scripts executed with Bun available (`bun test`, `bun run`).
 - Runtime: Bun >=1.3 (OpenTUI requirement).
 - Development command: `npm run dev`.
+- Preview the website: `npm run site`.
 - Build command: `npm run build`.
 - Start compiled app: `npm start`.
 - Reset local config: `npm run reset`.
